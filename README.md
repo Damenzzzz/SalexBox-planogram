@@ -1,0 +1,1 @@
+# SalexBox-planogram
