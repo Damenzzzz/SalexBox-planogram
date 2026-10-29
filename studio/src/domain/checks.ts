@@ -1,0 +1,105 @@
+import { MAKERS, MAKER_ORDER } from './formats';
+import { clearanceOf, innerW, laneOf, shelfIndex, shelvesTopDown, usedWidth } from './geometry';
+import type { Maker, Planogram, Sku } from './types';
+
+export type Severity = 'error' | 'contract' | 'ir' | 'info';
+
+export interface Issue {
+  sev: Severity;
+  text: string;
+  shelfId?: string;
+  placementId?: string;
+  addSku?: string;      // кнопка «Добавить»
+  skuId?: string;
+}
+
+export interface Analysis {
+  issues: Issue[];
+  facings: Record<string, number>;
+  byMaker: Partial<Record<Maker, number>>;
+  total: number;
+  fill: number;
+  placed: string[];
+  ready: number;   // SKU с 3+ эталонами
+  thin: number;    // SKU с 1–2 эталонами
+  noRefs: number;
+}
+
+// Пороги из configs/shelf/cigarettes.yaml и configs/categories/cigarettes.yaml
+export const IR_LIMITS = { minOuterItems: 3, aspect: [1.3, 2.4] as const, minAspect: 0.9, readyRefs: 3 };
+
+export function analyse(p: Planogram, sku: (id: string) => Sku | undefined): Analysis {
+  const fx = p.fixture;
+  const issues: Issue[] = [];
+  const facings: Record<string, number> = {};
+  const byMaker: Partial<Record<Maker, number>> = {};
+  let total = 0, fillSum = 0;
+  const shelves = shelvesTopDown(fx);
+  const twins = new Set(p.ir.twins.map(([a, b]) => [a, b].sort().join('|')));
+
+  shelves.forEach((sh, si) => {
+    const row = p.rows[sh.id] ?? [];
+    const { fromBottom, irRow } = shelfIndex(fx, sh.id);
+    const name = `Полка ${fromBottom}`;
+    const used = usedWidth(fx, sh, row, sku);
+    fillSum += Math.min(1, used / innerW(fx));
+    if (used > innerW(fx)) {
+      issues.push({ sev: 'error', shelfId: sh.id, text: `${name}: не помещается ${Math.ceil(used - innerW(fx))} мм. Уберите фейсинг или выберите SKU уже` });
+    }
+    const n = row.reduce((a, q) => a + q.facings, 0);
+    if (!row.length && !p.ir.skipShelves.includes(sh.id)) {
+      issues.push({ sev: 'info', shelfId: sh.id, text: `${name} пустая. IR увидит её как пустой ряд, если не исключить полку из сверки` });
+    } else if ((si === 0 || si === shelves.length - 1) && n > 0 && n < IR_LIMITS.minOuterItems) {
+      issues.push({ sev: 'ir', shelfId: sh.id, text: `${name} (IR-ряд ${irRow}): ${n} пачки на крайней полке. IR не считает крайний ряд из 1–2 пачек полкой (min_outer_items: 3)` });
+    }
+    row.forEach((q, i) => {
+      const s = sku(q.sku);
+      if (!s) { issues.push({ sev: 'error', shelfId: sh.id, placementId: q.id, text: `${name}: SKU «${q.sku}» нет в каталоге` }); return; }
+      facings[s.id] = (facings[s.id] ?? 0) + q.facings;
+      byMaker[s.maker] = (byMaker[s.maker] ?? 0) + q.facings;
+      total += q.facings;
+      if (s.h > clearanceOf(fx, sh)) {
+        issues.push({ sev: 'error', shelfId: sh.id, placementId: q.id, text: `${name}: ${s.name} (${s.h} мм) выше просвета ${Math.round(clearanceOf(fx, sh))} мм` });
+      }
+      if (laneOf(fx, sh, s) < s.w) {
+        issues.push({ sev: 'error', shelfId: sh.id, placementId: q.id, text: `${name}: ${s.name} шире ряда толкателя` });
+      }
+      const next = row[i + 1];
+      if (next && next.sku !== q.sku && twins.has([q.sku, next.sku].sort().join('|'))) {
+        issues.push({ sev: 'ir', shelfId: sh.id, placementId: next.id, text: `${name}: ${s.name} и ${sku(next.sku)?.name ?? next.sku} стоят рядом, а IR их путает. Разнесите по полкам или оставьте сверку этой пары по бренду` });
+      }
+    });
+  });
+
+  const placed = Object.keys(facings);
+  p.rules.mustHave.forEach(id => {
+    if (!facings[id]) issues.push({ sev: 'error', addSku: id, text: `Нет обязательного SKU: ${sku(id)?.name ?? id}` });
+  });
+  Object.entries(p.rules.minFacings).forEach(([id, min]) => {
+    if (facings[id] && facings[id] < min) issues.push({ sev: 'contract', skuId: id, text: `${sku(id)?.name ?? id}: ${facings[id]} фейсинг(а), по правилам не меньше ${min}` });
+  });
+  MAKER_ORDER.forEach(m => {
+    const target = p.rules.shareTargets[m];
+    if (!target) return;
+    const share = total ? (byMaker[m] ?? 0) / total : 0;
+    if (share < target) issues.push({ sev: 'contract', text: `Доля ${MAKERS[m]} ${(share * 100).toFixed(1)}% — по контракту не меньше ${Math.round(target * 100)}%` });
+  });
+
+  let ready = 0, thin = 0, noRefs = 0;
+  placed.forEach(id => {
+    const s = sku(id);
+    if (!s) return;
+    if (!s.label) issues.push({ sev: 'ir', skuId: id, text: `${s.name}: нет IR-метки. IR сверит только бренд` });
+    else if (s.refs === 0) { noRefs++; issues.push({ sev: 'ir', skuId: id, text: `${s.name}: нет эталонов в галерее. Добавьте 3+ фото с полки` }); }
+    else if (s.refs < IR_LIMITS.readyRefs) thin++;
+    else ready++;
+    const aspect = s.h / s.w;
+    if (aspect < IR_LIMITS.minAspect) issues.push({ sev: 'ir', skuId: id, text: `${s.name}: пачка лежит (В/Ш ${aspect.toFixed(2)}). IR такие боксы не считает (min_aspect 0.9)` });
+    else if (aspect < IR_LIMITS.aspect[0] || aspect > IR_LIMITS.aspect[1]) issues.push({ sev: 'ir', skuId: id, text: `${s.name}: пропорции В/Ш ${aspect.toFixed(2)} вне 1.3–2.4. Ряд может не попасть в табачный стеллаж (category_aspect)` });
+    if (s.formatGuessed) issues.push({ sev: 'info', skuId: id, text: `${s.name}: формат не указан в метке, взят King Size. Проверьте в каталоге` });
+  });
+
+  const order: Record<Severity, number> = { error: 0, contract: 1, ir: 2, info: 3 };
+  issues.sort((a, b) => order[a.sev] - order[b.sev]);
+  return { issues, facings, byMaker, total, fill: shelves.length ? fillSum / shelves.length : 0, placed, ready, thin, noRefs };
+}

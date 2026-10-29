@@ -1,0 +1,1067 @@
+{
+"source": "Qdrant:recognition_ref",
+"embedder": "google/siglip2-base-patch16-224@75de2d55ec2d0b4efc50b3e9ad70dba96a7b2fa2:224:pad:trim0.45/1.4",
+"snapshot": "2026-10-16",
+"labels": [
+{
+"label": "Blooming/Blooming Blue SS",
+"refs": 1
+},
+{
+"label": "Blooming/Blooming Silver SS",
+"refs": 1
+},
+{
+"label": "Blooming/Blooming Violet On SS",
+"refs": 1
+},
+{
+"label": "Bohem/Bohem Aqva Blue SS",
+"refs": 1
+},
+{
+"label": "Bohem/Bohem Cavana Brown Green Demi",
+"refs": 1
+},
+{
+"label": "Bohem/Bohem Cavana Demi",
+"refs": 1
+},
+{
+"label": "Bohem/Bohem Cavana Gold Demi",
+"refs": 1
+},
+{
+"label": "Bohem/Bohem Cavana Origin Blue",
+"refs": 1
+},
+{
+"label": "Bohem/Bohem Cavana Origin Silver",
+"refs": 1
+},
+{
+"label": "Bohem/Bohem Cavana Presso Demi",
+"refs": 1
+},
+{
+"label": "Bohem/Bohem Cigar Aroma Mini",
+"refs": 1
+},
+{
+"label": "Bohem/Bohem Cigar Original Blend Mini",
+"refs": 2
+},
+{
+"label": "Bohem/Bohem Classy Blue Demi",
+"refs": 1
+},
+{
+"label": "Bohem/Bohem Libre Brown KS",
+"refs": 1
+},
+{
+"label": "Bohem/Bohem Libre Classic Blue",
+"refs": 1
+},
+{
+"label": "Bohem/Bohem Libre Classic Silver",
+"refs": 1
+},
+{
+"label": "Bohem/Bohem Libre Deep Brown Demi",
+"refs": 1
+},
+{
+"label": "Bohem/Bohem Libre Green Demi",
+"refs": 1
+},
+{
+"label": "Bohem/Bohem Libre KS",
+"refs": 1
+},
+{
+"label": "Bohem/Bohem Rich Brown SS",
+"refs": 1
+},
+{
+"label": "Bohem/Bohem Signature Black",
+"refs": 1
+},
+{
+"label": "Bond/Bond Blue Compact",
+"refs": 3
+},
+{
+"label": "Bond/Bond Premium Mix Compact",
+"refs": 2
+},
+{
+"label": "Bond/Bond Silver Compact",
+"refs": 1
+},
+{
+"label": "Camel/Camel Activate Purple Compact",
+"refs": 1
+},
+{
+"label": "Camel/Camel Activate Ruby Compact",
+"refs": 1
+},
+{
+"label": "Camel/Camel Activate Yellow Compact",
+"refs": 1
+},
+{
+"label": "Camel/Camel Blue Compact",
+"refs": 2
+},
+{
+"label": "Camel/Camel Filters",
+"refs": 1
+},
+{
+"label": "Camel/Camel Studio Exotic Crush",
+"refs": 1
+},
+{
+"label": "Camel/Camel Studio Shisha Edition",
+"refs": 1
+},
+{
+"label": "Camel/Camel Studio Sunny Mix",
+"refs": 1
+},
+{
+"label": "Camel/Camel Studio Tropical Crush",
+"refs": 1
+},
+{
+"label": "Captain Black/Captain Black Classic",
+"refs": 1
+},
+{
+"label": "Captain Black/Captain Black Dark Crema",
+"refs": 1
+},
+{
+"label": "Captain Black/Captain Black Purple",
+"refs": 1
+},
+{
+"label": "Captain Black/Captain Black Red",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Autumn Edition",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Brown Compact",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Brown KS",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Brown KSSL",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Brown SS",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Classic Compact",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Classic KS",
+"refs": 2
+},
+{
+"label": "Chapman/Chapman Classic SS",
+"refs": 2
+},
+{
+"label": "Chapman/Chapman Eclipse Noire Gold",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Eclipse Noire Plat",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Fusion Flare Compact",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Fusion Pulse Compact",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Fusion Sparkle Compact",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Gold KS",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Gold SS",
+"refs": 2
+},
+{
+"label": "Chapman/Chapman Green",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Green Compact",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Green KSSL",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Green SS",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Purple SS",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Red Compact",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Red KS",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Red KSSL",
+"refs": 1
+},
+{
+"label": "Chapman/Chapman Red SS",
+"refs": 2
+},
+{
+"label": "Cigaronne/Cigaronne Big Boss Xl Filter",
+"refs": 1
+},
+{
+"label": "Cigaronne/Cigaronne Black KS",
+"refs": 1
+},
+{
+"label": "Cigaronne/Cigaronne Black Royal Slims",
+"refs": 1
+},
+{
+"label": "Cigaronne/Cigaronne Black SS",
+"refs": 1
+},
+{
+"label": "Cigaronne/Cigaronne Black Ultra Slims",
+"refs": 1
+},
+{
+"label": "Cigaronne/Cigaronne Legend Time Tested Xl Filter",
+"refs": 1
+},
+{
+"label": "Cigaronne/Cigaronne Magnet",
+"refs": 1
+},
+{
+"label": "Cigaronne/Cigaronne Menthol SS",
+"refs": 1
+},
+{
+"label": "Cigaronne/Cigaronne Menthol Xl Filter Royal Slims",
+"refs": 1
+},
+{
+"label": "Cigaronne/Cigaronne Phantom",
+"refs": 1
+},
+{
+"label": "Cigaronne/Cigaronne White Royal Slims",
+"refs": 1
+},
+{
+"label": "Cigaronne/Cigaronne White SS",
+"refs": 1
+},
+{
+"label": "Cigaronne/Cigaronne White Ultra Slims",
+"refs": 1
+},
+{
+"label": "Contact/Contact",
+"refs": 1
+},
+{
+"label": "Corsar/Corsar Блистер Ваниль",
+"refs": 1
+},
+{
+"label": "Corsar/Corsar Блистер Виски",
+"refs": 1
+},
+{
+"label": "Corsar/Corsar Блистер Вишня",
+"refs": 1
+},
+{
+"label": "Corsar/Corsar Блистер Капучино",
+"refs": 1
+},
+{
+"label": "Corsar/Corsar Блистер Кофе",
+"refs": 1
+},
+{
+"label": "Corsar/Corsar Блистер Ориджинал",
+"refs": 1
+},
+{
+"label": "Corsar/Corsar Блистер Ром",
+"refs": 1
+},
+{
+"label": "Corsar/Corsar Блистер Сладкой Вишни",
+"refs": 1
+},
+{
+"label": "Corsar/Corsar Блистер Спелая Вишня",
+"refs": 1
+},
+{
+"label": "Corsar/Corsar Пачка Ваниль",
+"refs": 1
+},
+{
+"label": "Corsar/Corsar Пачка Вишня",
+"refs": 1
+},
+{
+"label": "Corsar/Corsar Пачка Капучино",
+"refs": 1
+},
+{
+"label": "Corsar/Corsar Пачка Ориджинал",
+"refs": 1
+},
+{
+"label": "Dakota/Dakota Dark Crema",
+"refs": 1
+},
+{
+"label": "Dakota/Dakota Original",
+"refs": 1
+},
+{
+"label": "Dakota/Dakota Ваниль",
+"refs": 1
+},
+{
+"label": "Dakota/Dakota Капучино",
+"refs": 1
+},
+{
+"label": "Dakota/Dakota Черешня",
+"refs": 1
+},
+{
+"label": "Davidoff/Davidoff Classic Slims",
+"refs": 2
+},
+{
+"label": "Davidoff/Davidoff Gold Slims",
+"refs": 2
+},
+{
+"label": "Davidoff/Davidoff Reach Focus Black",
+"refs": 1
+},
+{
+"label": "Davidoff/Davidoff Reach Focus White",
+"refs": 1
+},
+{
+"label": "Davidoff/Davidoff Reach Purple",
+"refs": 1
+},
+{
+"label": "Davidoff/Davidoff Reach Silver",
+"refs": 1
+},
+{
+"label": "Davidoff/Davidoff Refine Black",
+"refs": 1
+},
+{
+"label": "Davidoff/Davidoff Refine White",
+"refs": 1
+},
+{
+"label": "Davidoff/Davidoff Silver",
+"refs": 1
+},
+{
+"label": "Democrat/Democrat Brown Compact",
+"refs": 1
+},
+{
+"label": "Democrat/Democrat Brown Nano",
+"refs": 1
+},
+{
+"label": "Democrat/Democrat Red Compact",
+"refs": 1
+},
+{
+"label": "Democrat/Democrat Red Nano",
+"refs": 1
+},
+{
+"label": "Djarum/Djarum Black",
+"refs": 1
+},
+{
+"label": "Djarum/Djarum Black Amethyst",
+"refs": 1
+},
+{
+"label": "Djarum/Djarum Black Menthol",
+"refs": 1
+},
+{
+"label": "Djarum/Djarum Black Ruby",
+"refs": 1
+},
+{
+"label": "Dunhill/Dunhill Fine Cut Master Blend KS 100",
+"refs": 1
+},
+{
+"label": "Dunhill/Dunhill Fine Cut Signature Blend KS 100",
+"refs": 1
+},
+{
+"label": "Esse/Esse Black Mini",
+"refs": 1
+},
+{
+"label": "Esse/Esse Blue SS",
+"refs": 2
+},
+{
+"label": "Esse/Esse Exchange",
+"refs": 1
+},
+{
+"label": "Esse/Esse Exchange Brown",
+"refs": 1
+},
+{
+"label": "Esse/Esse Exchange Compact",
+"refs": 1
+},
+{
+"label": "Esse/Esse Exchange Demi",
+"refs": 2
+},
+{
+"label": "Esse/Esse Exchange M SS",
+"refs": 1
+},
+{
+"label": "Esse/Esse Exchange Mini",
+"refs": 1
+},
+{
+"label": "Esse/Esse Exchange S SS",
+"refs": 2
+},
+{
+"label": "Esse/Esse Exchange SS",
+"refs": 1
+},
+{
+"label": "Esse/Esse Exchange Summer Red SS",
+"refs": 1
+},
+{
+"label": "Esse/Esse Exchange W Compact",
+"refs": 1
+},
+{
+"label": "Esse/Esse Exchange W Mini",
+"refs": 1
+},
+{
+"label": "Esse/Esse Exchange W SS",
+"refs": 1
+},
+{
+"label": "Esse/Esse Field SS",
+"refs": 1
+},
+{
+"label": "Esse/Esse Golden Leaf SS",
+"refs": 1
+},
+{
+"label": "Esse/Esse Green Compact",
+"refs": 1
+},
+{
+"label": "Esse/Esse Menthol SS",
+"refs": 3
+},
+{
+"label": "Esse/Esse One SS",
+"refs": 2
+},
+{
+"label": "Esse/Esse Presso SS",
+"refs": 2
+},
+{
+"label": "Esse/Esse Sense Himalaya Compact",
+"refs": 1
+},
+{
+"label": "Esse/Esse Silver",
+"refs": 1
+},
+{
+"label": "Esse/Esse Special Gold SS",
+"refs": 2
+},
+{
+"label": "Glamour/Glamour Amber SS",
+"refs": 1
+},
+{
+"label": "Glamour/Glamour Azure SS",
+"refs": 1
+},
+{
+"label": "Gold Mill/Gold Mill Арома Люкс Виолет",
+"refs": 1
+},
+{
+"label": "Gold Mill/Gold Mill Блю",
+"refs": 1
+},
+{
+"label": "Gold Mill/Gold Mill Браун SS",
+"refs": 1
+},
+{
+"label": "Gold Mill/Gold Mill Рэд SS",
+"refs": 1
+},
+{
+"label": "K.Ritter/K.Ritter Виноград Compact",
+"refs": 1
+},
+{
+"label": "K.Ritter/K.Ritter Виноград SS",
+"refs": 1
+},
+{
+"label": "K.Ritter/K.Ritter Вишня Compact",
+"refs": 1
+},
+{
+"label": "K.Ritter/K.Ritter Вишня SS",
+"refs": 1
+},
+{
+"label": "K.Ritter/K.Ritter Туринский Кофе Compact",
+"refs": 1
+},
+{
+"label": "K.Ritter/K.Ritter Туринский Кофе SS",
+"refs": 1
+},
+{
+"label": "Kent/Kent 1 White",
+"refs": 1
+},
+{
+"label": "Kent/Kent 4 Silver Nano",
+"refs": 1
+},
+{
+"label": "Kent/Kent 8 Blue KS",
+"refs": 1
+},
+{
+"label": "Kent/Kent Crystal",
+"refs": 1
+},
+{
+"label": "Kent/Kent Crystal Bright",
+"refs": 1
+},
+{
+"label": "Kent/Kent Crystal Charged",
+"refs": 1
+},
+{
+"label": "Kent/Kent Crystal Duo",
+"refs": 1
+},
+{
+"label": "Kent/Kent Crystal Grace SS",
+"refs": 1
+},
+{
+"label": "Kent/Kent Crystal Mix",
+"refs": 1
+},
+{
+"label": "Kent/Kent Crystal Shine SS",
+"refs": 2
+},
+{
+"label": "Kent/Kent Crystal Spark SS",
+"refs": 1
+},
+{
+"label": "Kent/Kent Dual Mix",
+"refs": 1
+},
+{
+"label": "Kent/Kent Feel Aroma Nano",
+"refs": 1
+},
+{
+"label": "Kent/Kent Feel Fresh",
+"refs": 1
+},
+{
+"label": "Kent/Kent Feel Velvet",
+"refs": 1
+},
+{
+"label": "Kent/Kent Mix",
+"refs": 1
+},
+{
+"label": "Kent/Kent Mode Blue",
+"refs": 1
+},
+{
+"label": "Kent/Kent Mode Silver",
+"refs": 1
+},
+{
+"label": "Kent/Kent Purple Compact",
+"refs": 1
+},
+{
+"label": "Kent/Kent Reload Blue Compact",
+"refs": 1
+},
+{
+"label": "Kent/Kent Reload Silver",
+"refs": 1
+},
+{
+"label": "Kent/Kent Silver Nano",
+"refs": 1
+},
+{
+"label": "Kent/Kent Switch KS",
+"refs": 1
+},
+{
+"label": "Kent/Kent White Nano",
+"refs": 1
+},
+{
+"label": "Kiss/Kiss Brown Effect SS",
+"refs": 1
+},
+{
+"label": "Kiss/Kiss Jolly",
+"refs": 1
+},
+{
+"label": "L&M/L&M Loft",
+"refs": 1
+},
+{
+"label": "L&M/L&M Loft 2 In 1",
+"refs": 1
+},
+{
+"label": "L&M/L&M Loft Blue",
+"refs": 2
+},
+{
+"label": "L&M/L&M Loft Mix",
+"refs": 1
+},
+{
+"label": "L&M/L&M Lounge Blue",
+"refs": 1
+},
+{
+"label": "L&M/L&M Lounge Mix",
+"refs": 1
+},
+{
+"label": "L&M/L&M Motion Blue",
+"refs": 1
+},
+{
+"label": "LD/LD Club Gold",
+"refs": 1
+},
+{
+"label": "LD/LD Club Platinum Nano",
+"refs": 1
+},
+{
+"label": "LD/LD Impulse 100S Compact",
+"refs": 1
+},
+{
+"label": "LD/LD Impulse Dual",
+"refs": 1
+},
+{
+"label": "LD/LD Lounge Compact",
+"refs": 1
+},
+{
+"label": "LD/LD Silver Compact",
+"refs": 2
+},
+{
+"label": "Mackintosh/Mackintosh",
+"refs": 1
+},
+{
+"label": "Marlboro/Marlboro Fine Touch Compact",
+"refs": 1
+},
+{
+"label": "Marlboro/Marlboro Gold KS",
+"refs": 1
+},
+{
+"label": "Marlboro/Marlboro Red KS",
+"refs": 1
+},
+{
+"label": "Milano/Milano Green SS",
+"refs": 1
+},
+{
+"label": "NZ/NZ 8",
+"refs": 1
+},
+{
+"label": "NZ/NZ Safari",
+"refs": 1
+},
+{
+"label": "Parliament/Parliament Aqua Blue KS",
+"refs": 1
+},
+{
+"label": "Parliament/Parliament Mix SS",
+"refs": 1
+},
+{
+"label": "Parliament/Parliament Night Blue KS",
+"refs": 1
+},
+{
+"label": "Parliament/Parliament Platinum Blue KS",
+"refs": 1
+},
+{
+"label": "Parliament/Parliament Reserve 100 SS",
+"refs": 1
+},
+{
+"label": "Parliament/Parliament Reserve Nano",
+"refs": 1
+},
+{
+"label": "Pepe/Pepe Rich Green",
+"refs": 1
+},
+{
+"label": "Philip Morris/Philip Morris Premium Mix Purple",
+"refs": 1
+},
+{
+"label": "Raison/Raison French Black KS",
+"refs": 1
+},
+{
+"label": "Richmond/Richmond Black Edition KS",
+"refs": 1
+},
+{
+"label": "Richmond/Richmond Bronze Edition SS",
+"refs": 1
+},
+{
+"label": "Richmond/Richmond Compact",
+"refs": 1
+},
+{
+"label": "Richmond/Richmond Purple Compact",
+"refs": 1
+},
+{
+"label": "Richmond/Richmond Red Edition SS",
+"refs": 1
+},
+{
+"label": "Richmond/Richmond Sunnset Edition",
+"refs": 1
+},
+{
+"label": "Rothmans/Rothmans 3 In 1 Demi",
+"refs": 1
+},
+{
+"label": "Rothmans/Rothmans Blue Demi",
+"refs": 2
+},
+{
+"label": "Rothmans/Rothmans Click Amber Demi",
+"refs": 1
+},
+{
+"label": "Rothmans/Rothmans Click Coral Demi",
+"refs": 1
+},
+{
+"label": "Rothmans/Rothmans Click Demi",
+"refs": 1
+},
+{
+"label": "Rothmans/Rothmans Click Green Demi",
+"refs": 1
+},
+{
+"label": "Rothmans/Rothmans Click Hit Demi",
+"refs": 1
+},
+{
+"label": "Rothmans/Rothmans Click Lime Demi",
+"refs": 1
+},
+{
+"label": "Rothmans/Rothmans Click Purple Demi",
+"refs": 1
+},
+{
+"label": "Rothmans/Rothmans Click Volt Demi",
+"refs": 1
+},
+{
+"label": "Rothmans/Rothmans D Mix",
+"refs": 1
+},
+{
+"label": "Rothmans/Rothmans Double Click Demi",
+"refs": 1
+},
+{
+"label": "Rothmans/Rothmans Silver Demi",
+"refs": 1
+},
+{
+"label": "Sobranie/Sobranie Blacks",
+"refs": 1
+},
+{
+"label": "Sobranie/Sobranie Blue Compact",
+"refs": 2
+},
+{
+"label": "Sobranie/Sobranie Caster Blend Compact",
+"refs": 1
+},
+{
+"label": "Sobranie/Sobranie Element Caster",
+"refs": 1
+},
+{
+"label": "Sobranie/Sobranie Evolve",
+"refs": 1
+},
+{
+"label": "Sobranie/Sobranie Exotica",
+"refs": 1
+},
+{
+"label": "Sobranie/Sobranie Refine Black",
+"refs": 1
+},
+{
+"label": "Sobranie/Sobranie Refine Chrome 100S Slim 100",
+"refs": 1
+},
+{
+"label": "Stolichnye/Stolichnye",
+"refs": 1
+},
+{
+"label": "The Bristol/The Bristol",
+"refs": 1
+},
+{
+"label": "Vertu/Vertu Блэк Даймонд",
+"refs": 1
+},
+{
+"label": "Vertu/Vertu Даймонд",
+"refs": 1
+},
+{
+"label": "Vogue/Vogue Menthe",
+"refs": 1
+},
+{
+"label": "Winston/Winston Blue SS",
+"refs": 1
+},
+{
+"label": "Winston/Winston Caster Plus Compact",
+"refs": 1
+},
+{
+"label": "Winston/Winston Expand Blue SS",
+"refs": 1
+},
+{
+"label": "Winston/Winston Expand Purple SS",
+"refs": 1
+},
+{
+"label": "Winston/Winston Flash Mix Compact",
+"refs": 1
+},
+{
+"label": "Winston/Winston Plus 100S Compact",
+"refs": 1
+},
+{
+"label": "Winston/Winston Plus Blue Compact",
+"refs": 1
+},
+{
+"label": "Winston/Winston Plus Blue Impulse Compact",
+"refs": 1
+},
+{
+"label": "Winston/Winston Plus Shiny Mix Compact",
+"refs": 1
+},
+{
+"label": "Winston/Winston Purple Mix Compact",
+"refs": 1
+},
+{
+"label": "Winston/Winston Silver KS",
+"refs": 1
+},
+{
+"label": "Winston/Winston Silver SS",
+"refs": 1
+},
+{
+"label": "Winston/Winston White KS",
+"refs": 1
+},
+{
+"label": "Winston/Winston White SS",
+"refs": 1
+},
+{
+"label": "Winston/Winston Xs Blue Nano",
+"refs": 1
+},
+{
+"label": "Winston/Winston Xs Purple Mix",
+"refs": 1
+},
+{
+"label": "Winston/Winston Xs Silver Nano",
+"refs": 1
+},
+{
+"label": "Winston/Winston Xs Summer Mix",
+"refs": 1
+},
+{
+"label": "Winston/Winston Xstyle Blue Compact",
+"refs": 1
+},
+{
+"label": "Winston/Winston Xstyle Dual Compact",
+"refs": 1
+},
+{
+"label": "Winston/Winston Xstyle Silver Compact",
+"refs": 1
+},
+{
+"label": "Богатыри/Богатыри",
+"refs": 1
+},
+{
+"label": "Богатыри/Богатыри Трубочным Табаком 1",
+"refs": 1
+},
+{
+"label": "Богатыри/Богатыри Трубочным Табаком 2",
+"refs": 1
+},
+{
+"label": "Гараж/Гараж Арома Рэд Demi",
+"refs": 1
+},
+{
+"label": "Гараж/Гараж Классик Demi",
+"refs": 2
+},
+{
+"label": "Гараж/Гараж Тюнинг",
+"refs": 1
+},
+{
+"label": "Мерси Ля Фабрик/Мерси Ля Фабрик Рэд",
+"refs": 1
+},
+{
+"label": "Мерси Ля Фабрик/Мерси Ля Фабрик Скарлет",
+"refs": 1
+},
+{
+"label": "Русский Стиль/Русский Стиль KS",
+"refs": 1
+},
+{
+"label": "Русский Стиль/Русский Стиль Slim 100",
+"refs": 1
+}
+]
+}

@@ -1,0 +1,1129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Planogram Studio</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#1b2230;background:#f4f5f7}
+a{color:#2457d6}a:hover{color:#1a3f9e}
+.pg-btn{font:500 13px/1 Inter,system-ui,sans-serif;height:36px;padding:0 12px;border:1px solid #d5d9e0;background:#fff;color:#1b2230;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;white-space:nowrap;box-sizing:border-box}
+.pg-btn:hover{background:#f1f3f7}
+.pg-btn:focus-visible,.pg-in:focus-visible,.pg-card:focus-visible,.pg-sku:focus-visible,.pg-tab:focus-visible{outline:2px solid #2457d6;outline-offset:1px}
+.pg-primary{background:#2457d6;border-color:#2457d6;color:#fff}
+.pg-primary:hover{background:#1d49b8}
+.pg-danger{color:#b42318}
+.pg-sq{width:36px;padding:0}
+.pg-in{height:36px;border:1px solid #d5d9e0;border-radius:6px;padding:0 8px;font:400 13px Inter,system-ui,sans-serif;color:#1b2230;width:100%;box-sizing:border-box;background:#fff;min-width:0}
+.pg-lbl{font:500 11px/1.2 Inter,system-ui,sans-serif;color:#5b6575;display:flex;flex-direction:column;gap:4px;min-width:0}
+.pg-sec{padding:16px;border-bottom:1px solid #e3e6eb;display:flex;flex-direction:column;gap:12px}
+.pg-h{font:600 11px/1.2 Inter,system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#5b6575;margin:0}
+.pg-g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.pg-g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.pg-card{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:8px;border:1px solid #e3e6eb;border-radius:8px;background:#fff;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.pg-card:hover{border-color:#2457d6}
+.pg-sku{display:flex;align-items:center;gap:10px;padding:6px 8px;border:1px solid transparent;border-radius:8px;background:#fff;cursor:grab;width:100%;text-align:left;font:inherit;color:inherit;box-sizing:border-box}
+.pg-sku:hover{background:#f1f4fb;border-color:#d7e0f5}
+.pg-tab{height:32px;padding:0 10px;border:1px solid #d5d9e0;border-radius:16px;background:#fff;font:500 12px Inter,system-ui,sans-serif;color:#3c4554;cursor:pointer}
+.pg-tab-on{background:#1b2230;border-color:#1b2230;color:#fff}
+.pg-row{display:flex;align-items:center;gap:8px}
+.pg-muted{color:#5b6575;font-size:12px;line-height:1.4}
+input[type=range]{width:100%;accent-color:#2457d6}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-direction: column; background: #f4f5f7">
+
+<header style="height: 56px; flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 0 16px; background: #ffffff; border-bottom: 1px solid #e3e6eb; box-sizing: border-box">
+<div style="display: flex; align-items: center; gap: 10px">
+<svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="6" fill="#1b2230"></rect><rect x="6" y="7" width="16" height="2" fill="#ffffff"></rect><rect x="6" y="13" width="16" height="2" fill="#ffffff"></rect><rect x="6" y="19" width="16" height="2" fill="#ffffff"></rect><rect x="8" y="3" width="4" height="4" fill="#5b8cff"></rect><rect x="14" y="9" width="5" height="4" fill="#f59e0b"></rect><rect x="8" y="15" width="3" height="4" fill="#34d399"></rect></svg>
+<span style="font-weight: 700; font-size: 15px; letter-spacing: -0.01em">Planogram Studio</span>
+</div>
+<label style="display: flex; align-items: center; flex: 1 1 260px; max-width: 420px; min-width: 0">
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Planogram name</span>
+<input class="pg-in" type="text" value="{{name}}" onChange="{{onName}}" style="font-weight: 500">
+</label>
+<div style="flex: 1 1 auto"></div>
+<sc-if value="{{hasMsg}}" hint-placeholder-val="{{ false }}"><span role="status" style="font-size: 12px; color: #1b2230; background: #fff4d6; border: 1px solid #f0d58a; padding: 6px 10px; border-radius: 6px">{{msg}}</span></sc-if>
+<label class="pg-btn" style="position: relative; overflow: hidden" title="Load a planogram JSON file">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M4 20h16"></path></svg>Import JSON
+<input type="file" accept="application/json,.json" onChange="{{onImport}}" style="position: absolute; inset: 0; opacity: 0; cursor: pointer">
+</label>
+<button type="button" class="pg-btn pg-primary" onClick="{{onExport}}">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"></path></svg>Export JSON
+</button>
+<button type="button" class="pg-btn" onClick="{{selectSummary}}" style="{{issueBtnStyle}}">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3 2 21h20L12 3z"></path><path d="M12 10v5"></path><path d="M12 18v.5"></path></svg>
+{{issueLabel}}
+</button>
+<button type="button" class="pg-btn" aria-pressed="{{dimsPressed}}" onClick="{{toggleDims}}">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"></path><path d="M7 13l2 2M10 10l2 2M13 7l2 2"></path></svg>
+{{dimsLabel}}
+</button>
+<div class="pg-row" style="gap: 4px">
+<button type="button" class="pg-btn pg-sq" aria-label="Zoom out" onClick="{{zoomOut}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+<span style="min-width: 64px; text-align: center; font-size: 12px; font-weight: 600; color: #3c4554">{{zoomLabel}}</span>
+<button type="button" class="pg-btn pg-sq" aria-label="Zoom in" onClick="{{zoomIn}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"></path></svg></button>
+</div>
+</header>
+
+<div style="flex: 1 1 auto; min-height: 0; display: flex; flex-wrap: wrap">
+
+<aside style="flex: 1 1 260px; max-height: calc(100vh - 56px); overflow: auto; background: #ffffff; border-right: 1px solid #e3e6eb; box-sizing: border-box">
+<section class="pg-sec">
+<h2 class="pg-h">Add fixture</h2>
+<div class="pg-g2">
+<sc-for list="{{fixtureTypes}}" as="t" hint-placeholder-count="6">
+<button type="button" class="pg-card" onClick="{{t.onAdd}}">
+<span style="{{t.miniStyle}}"></span>
+<span style="font-size: 12px; font-weight: 600; line-height: 1.2">{{t.label}}</span>
+<span style="font-size: 11px; color: #5b6575">{{t.size}}</span>
+</button>
+</sc-for>
+</div>
+</section>
+<section class="pg-sec" style="border-bottom: 0">
+<div class="pg-row" style="justify-content: space-between">
+<h2 class="pg-h">SKU library</h2>
+<button type="button" class="pg-btn" style="height: 32px; font-size: 12px" onClick="{{newSku}}">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"></path></svg>New SKU</button>
+</div>
+<label class="pg-lbl"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search SKUs</span>
+<input class="pg-in" type="search" placeholder="Search by name or code" value="{{q}}" onChange="{{onSearch}}">
+</label>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<sc-for list="{{cats}}" as="c" hint-placeholder-count="5">
+<button type="button" class="{{c.cls}}" aria-pressed="{{c.pressed}}" onClick="{{c.onPick}}">{{c.label}}</button>
+</sc-for>
+</div>
+<p class="pg-muted" style="margin: 0">Drag a SKU onto a shelf, or select a shelf and click a SKU to add it at the end.</p>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<sc-for list="{{skuList}}" as="k" hint-placeholder-count="8">
+<button type="button" class="pg-sku" draggable="true" onDragStart="{{k.onDragStart}}" onClick="{{k.onAdd}}" title="{{k.name}}">
+<span style="width: 40px; height: 52px; flex: 0 0 40px; display: flex; align-items: flex-end; justify-content: center; background: #f4f5f7; border-radius: 6px; overflow: hidden">
+<sc-if value="{{k.hasPhoto}}" hint-placeholder-val="{{ false }}"><img src="{{k.photo}}" alt="" style="width: 40px; height: 52px; object-fit: contain"></sc-if>
+<sc-if value="{{k.noPhoto}}" hint-placeholder-val="{{ true }}"><span style="{{k.thumbStyle}}"></span></sc-if>
+</span>
+<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<span style="font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{k.name}}</span>
+<span style="font-size: 11px; color: #5b6575">{{k.meta}}</span>
+</span>
+</button>
+</sc-for>
+</div>
+</section>
+</aside>
+
+<main style="flex: 999 1 560px; min-width: 0; max-height: calc(100vh - 56px); display: flex; flex-direction: column">
+<div style="flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; padding: 10px 16px; font-size: 12px; color: #5b6575; background: #f4f5f7; border-bottom: 1px solid #e3e6eb">
+<span><strong style="color: #1b2230">Drag</strong> a pack to move it between shelves</span>
+<span><strong style="color: #1b2230">Side handle</strong> adds or removes facings</span>
+<span><strong style="color: #1b2230">Corner handle</strong> resizes the pack</span>
+<span><strong style="color: #1b2230">Drag a shelf board</strong> to change its height · drag a fixture name to move it</span>
+</div>
+<div style="flex: 1 1 auto; min-height: 0; overflow: auto; padding: 64px 48px 72px; background: #e7eaee">
+<div data-stage="1" style="{{stageStyle}}" onPointerDown="{{onStageDown}}" onDragOver="{{onDragOver}}" onDrop="{{onDrop}}">
+<sc-for list="{{fixtures}}" as="fx" hint-placeholder-count="3">
+<div style="{{fx.style}}" onPointerDown="{{fx.onDown}}">
+<div style="{{fx.stripStyle}}" onPointerDown="{{fx.onStripDown}}" title="Drag to move this fixture along the wall">
+<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" style="flex: 0 0 10px"><circle cx="2.5" cy="2.5" r="1" fill="currentColor"></circle><circle cx="7.5" cy="2.5" r="1" fill="currentColor"></circle><circle cx="2.5" cy="7.5" r="1" fill="currentColor"></circle><circle cx="7.5" cy="7.5" r="1" fill="currentColor"></circle></svg>
+<span style="font-weight: 600">{{fx.name}}</span><span style="opacity: 0.8">{{fx.meta}}</span>
+</div>
+<sc-if value="{{fx.hasHeader}}" hint-placeholder-val="{{ false }}"><div style="{{fx.headerStyle}}">{{fx.name}}</div></sc-if>
+<div style="{{fx.baseStyle}}"></div>
+<sc-for list="{{fx.shelves}}" as="sh" hint-placeholder-count="4">
+<sc-if value="{{sh.hasLanes}}" hint-placeholder-val="{{ false }}"><div style="{{sh.laneStyle}}"></div></sc-if>
+<div style="{{sh.boardStyle}}" onPointerDown="{{sh.onDown}}" title="{{sh.title}}"></div>
+<sc-if value="{{sh.showLabel}}" hint-placeholder-val="{{ false }}"><span style="{{sh.labelStyle}}">{{sh.label}}</span></sc-if>
+</sc-for>
+<sc-for list="{{fx.items}}" as="it" hint-placeholder-count="4">
+<div style="{{it.style}}" onPointerDown="{{it.onDown}}" title="{{it.title}}">
+<sc-for list="{{it.faces}}" as="f" hint-placeholder-count="2">
+<div style="{{f.boxStyle}}">
+<div style="{{f.innerStyle}}">
+<sc-if value="{{f.hasPhoto}}" hint-placeholder-val="{{ false }}"><img src="{{f.photo}}" alt="" draggable="false" style="{{f.imgStyle}}"></sc-if>
+<sc-if value="{{f.noPhoto}}" hint-placeholder-val="{{ true }}"><div style="{{f.packStyle}}"><span style="{{f.labelStyle}}">{{f.label}}</span></div></sc-if>
+</div>
+</div>
+</sc-for>
+<sc-if value="{{it.selected}}" hint-placeholder-val="{{ false }}">
+<span style="position: absolute; left: 0; top: -20px; font: 600 10px/16px Inter, system-ui, sans-serif; padding: 0 6px; border-radius: 3px; background: #2457d6; color: #ffffff; white-space: nowrap; pointer-events: none; z-index: 31">{{it.tag}}</span>
+<button type="button" aria-label="Drag to change facings" title="Drag left or right to change facings" onPointerDown="{{it.onFacDown}}" style="position: absolute; right: -13px; top: 50%; margin-top: -15px; width: 12px; height: 30px; padding: 0; border: 1px solid #2457d6; border-radius: 4px; background: #ffffff; cursor: ew-resize; z-index: 30; display: flex; align-items: center; justify-content: center"><svg width="6" height="14" viewBox="0 0 6 14" aria-hidden="true"><path d="M1 1v12M5 1v12" stroke="#2457d6" stroke-width="1.4"></path></svg></button>
+<button type="button" aria-label="Drag to resize the pack" title="Drag to resize the pack" onPointerDown="{{it.onSizeDown}}" style="position: absolute; right: -7px; top: -7px; width: 13px; height: 13px; padding: 0; border: 2px solid #2457d6; border-radius: 2px; background: #ffffff; cursor: nesw-resize; z-index: 30"></button>
+</sc-if>
+</div>
+</sc-for>
+<sc-if value="{{fx.isCooler}}" hint-placeholder-val="{{ false }}"><div style="{{fx.glassStyle}}"></div><div style="{{fx.handleStyle}}"></div></sc-if>
+<sc-if value="{{fx.doorsClosed}}" hint-placeholder-val="{{ false }}"><div style="{{fx.doorStyle}}">Doors closed</div></sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</main>
+
+<aside style="flex: 1 1 300px; max-height: calc(100vh - 56px); overflow: auto; background: #ffffff; border-left: 1px solid #e3e6eb; box-sizing: border-box">
+
+<sc-if value="{{selNone}}" hint-placeholder-val="{{ true }}">
+<section class="pg-sec">
+<h2 class="pg-h">Planogram summary</h2>
+<div class="pg-g2">
+<div style="padding: 10px; background: #f4f5f7; border-radius: 8px"><div style="font-size: 20px; font-weight: 700">{{sum.fixtures}}</div><div class="pg-muted">Fixtures</div></div>
+<div style="padding: 10px; background: #f4f5f7; border-radius: 8px"><div style="font-size: 20px; font-weight: 700">{{sum.skus}}</div><div class="pg-muted">SKUs placed</div></div>
+<div style="padding: 10px; background: #f4f5f7; border-radius: 8px"><div style="font-size: 20px; font-weight: 700">{{sum.facings}}</div><div class="pg-muted">Facings</div></div>
+<div style="padding: 10px; background: #f4f5f7; border-radius: 8px"><div style="font-size: 20px; font-weight: 700">{{sum.fill}}</div><div class="pg-muted">Shelf fill</div></div>
+</div>
+</section>
+<section class="pg-sec">
+<h2 class="pg-h">Share of shelf · linear cm</h2>
+<sc-for list="{{sum.cats}}" as="c" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div class="pg-row" style="justify-content: space-between; font-size: 12px"><span class="pg-row" style="gap: 6px"><span style="{{c.swatch}}"></span>{{c.label}}</span><span style="font-weight: 600">{{c.pct}}</span></div>
+<div style="height: 6px; background: #eceef2; border-radius: 3px; overflow: hidden"><div style="{{c.bar}}"></div></div>
+</div>
+</sc-for>
+</section>
+<section class="pg-sec" style="border-bottom: 0">
+<h2 class="pg-h">Compliance checks</h2>
+<sc-if value="{{sum.noIssues}}" hint-placeholder-val="{{ false }}"><p class="pg-muted" style="margin: 0">No issues. Every SKU fits its shelf clearance and fixture width.</p></sc-if>
+<sc-for list="{{sum.issues}}" as="i" hint-placeholder-count="2">
+<button type="button" class="pg-card" onClick="{{i.onPick}}" style="border-color: #f3c7c2; background: #fff7f6; width: 100%">
+<span style="font-size: 12px; font-weight: 600">{{i.title}}</span>
+<span class="pg-muted">{{i.text}}</span>
+</button>
+</sc-for>
+</section>
+</sc-if>
+
+<sc-if value="{{selFx}}" hint-placeholder-val="{{ false }}">
+<section class="pg-sec">
+<div class="pg-row" style="justify-content: space-between">
+<h2 class="pg-h">{{fi.typeLabel}}</h2>
+<span class="pg-muted">{{fi.fill}} filled</span>
+</div>
+<label class="pg-lbl">Fixture name<input class="pg-in" type="text" value="{{fi.name}}" onChange="{{fi.onName}}"></label>
+<div class="pg-g3">
+<label class="pg-lbl">Width, cm<input class="pg-in" type="number" min="20" step="1" value="{{fi.w}}" onChange="{{fi.onW}}"></label>
+<label class="pg-lbl">Height, cm<input class="pg-in" type="number" min="30" step="1" value="{{fi.h}}" onChange="{{fi.onH}}"></label>
+<label class="pg-lbl">Depth, cm<input class="pg-in" type="number" min="5" step="1" value="{{fi.depth}}" onChange="{{fi.onDepth}}"></label>
+<label class="pg-lbl">Base, cm<input class="pg-in" type="number" min="0" step="0.5" value="{{fi.base}}" onChange="{{fi.onBase}}"></label>
+<label class="pg-lbl">Header, cm<input class="pg-in" type="number" min="0" step="0.5" value="{{fi.header}}" onChange="{{fi.onHeader}}"></label>
+<label class="pg-lbl">Board, cm<input class="pg-in" type="number" min="0.5" step="0.5" value="{{fi.thick}}" onChange="{{fi.onThick}}"></label>
+</div>
+<label class="pg-lbl">Pusher lane width, cm (0 = free placement)<input class="pg-in" type="number" min="0" step="0.5" value="{{fi.lanes}}" onChange="{{fi.onLanes}}"></label>
+<sc-if value="{{fi.hasDoors}}" hint-placeholder-val="{{ false }}">
+<label class="pg-row" style="font-size: 13px; cursor: pointer"><input type="checkbox" checked="{{fi.doors}}" onChange="{{fi.onDoors}}" style="width: 18px; height: 18px; accent-color: #2457d6">Show closed doors</label>
+</sc-if>
+</section>
+<section class="pg-sec">
+<div class="pg-row" style="justify-content: space-between">
+<h2 class="pg-h">{{fi.shelfWord}} · {{fi.count}}</h2>
+<span class="pg-muted">height from floor</span>
+</div>
+<sc-for list="{{fi.shelves}}" as="r" hint-placeholder-count="4">
+<div style="{{r.rowStyle}}">
+<button type="button" onClick="{{r.onPick}}" style="width: 36px; height: 36px; border: 0; background: transparent; font: 600 12px Inter, system-ui, sans-serif; color: #1b2230; cursor: pointer; padding: 0">{{r.n}}</button>
+<label style="flex: 1 1 auto; min-width: 0"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">{{r.aria}}</span><input class="pg-in" type="number" step="0.5" min="0" value="{{r.y}}" onChange="{{r.onY}}"></label>
+<span style="flex: 0 0 86px; font-size: 11px; color: #5b6575">{{r.gap}}</span>
+<button type="button" class="pg-btn pg-sq pg-danger" aria-label="{{r.removeLabel}}" onClick="{{r.onRemove}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg></button>
+</div>
+</sc-for>
+<div class="pg-g2">
+<button type="button" class="pg-btn" onClick="{{fi.onAddShelf}}">Add {{fi.oneWord}}</button>
+<button type="button" class="pg-btn" onClick="{{fi.onDistribute}}">Space evenly</button>
+</div>
+</section>
+<section class="pg-sec" style="border-bottom: 0">
+<div class="pg-g2">
+<button type="button" class="pg-btn" onClick="{{fi.onDup}}">Duplicate fixture</button>
+<button type="button" class="pg-btn pg-danger" onClick="{{fi.onDel}}">Delete fixture</button>
+</div>
+<button type="button" class="pg-btn" onClick="{{fi.onClear}}">Remove all SKUs from fixture</button>
+</section>
+</sc-if>
+
+<sc-if value="{{selItem}}" hint-placeholder-val="{{ false }}">
+<section class="pg-sec">
+<div class="pg-row" style="gap: 12px; align-items: flex-start">
+<span style="width: 56px; height: 72px; flex: 0 0 56px; display: flex; align-items: flex-end; justify-content: center; background: #f4f5f7; border-radius: 8px; overflow: hidden">
+<sc-if value="{{si.hasPhoto}}" hint-placeholder-val="{{ false }}"><img src="{{si.photo}}" alt="{{si.name}}" style="width: 56px; height: 72px; object-fit: contain"></sc-if>
+<sc-if value="{{si.noPhoto}}" hint-placeholder-val="{{ true }}"><span style="{{si.thumbStyle}}"></span></sc-if>
+</span>
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<span style="font-size: 15px; font-weight: 600">{{si.name}}</span>
+<span class="pg-muted">{{si.code}} · {{si.cat}}</span>
+<span class="pg-muted">{{si.where}}</span>
+</div>
+</div>
+<label class="pg-lbl">SKU name<input class="pg-in" type="text" value="{{si.name}}" onChange="{{si.onName}}"></label>
+<sc-for list="{{si.issues}}" as="m" hint-placeholder-count="1">
+<div style="font-size: 12px; color: #9a1c12; background: #fff1ef; border: 1px solid #f3c7c2; border-radius: 6px; padding: 8px 10px">{{m.text}}</div>
+</sc-for>
+</section>
+<section class="pg-sec">
+<h2 class="pg-h">Placement</h2>
+<div class="pg-row" style="justify-content: space-between">
+<span style="font-size: 13px; font-weight: 500">Facings</span>
+<div class="pg-row" style="gap: 4px">
+<button type="button" class="pg-btn pg-sq" aria-label="Remove a facing" onClick="{{si.onFacMinus}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+<span style="min-width: 36px; text-align: center; font-weight: 700">{{si.facings}}</span>
+<button type="button" class="pg-btn pg-sq" aria-label="Add a facing" onClick="{{si.onFacPlus}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"></path></svg></button>
+</div>
+</div>
+<div class="pg-g3">
+<label class="pg-lbl">Pack W, cm<input class="pg-in" type="number" min="0.5" step="0.1" value="{{si.w}}" onChange="{{si.onW}}"></label>
+<label class="pg-lbl">Pack H, cm<input class="pg-in" type="number" min="0.5" step="0.1" value="{{si.h}}" onChange="{{si.onH}}"></label>
+<label class="pg-lbl">From left, cm<input class="pg-in" type="number" min="0" step="0.5" value="{{si.x}}" onChange="{{si.onX}}"></label>
+</div>
+<p class="pg-muted" style="margin: 0">{{si.span}}</p>
+<div class="pg-g2">
+<button type="button" class="pg-btn" onClick="{{si.onResetSize}}">Reset to SKU size</button>
+<button type="button" class="pg-btn" onClick="{{si.onSaveSize}}">Save as SKU size</button>
+</div>
+</section>
+<section class="pg-sec">
+<h2 class="pg-h">Photo</h2>
+<div class="pg-g2">
+<label class="pg-btn pg-primary" style="position: relative; overflow: hidden">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"></path></svg>Upload photo
+<input type="file" accept="image/*" onChange="{{si.onPhoto}}" style="position: absolute; inset: 0; opacity: 0; cursor: pointer">
+</label>
+<button type="button" class="pg-btn" onClick="{{si.onRemovePhoto}}" disabled="{{si.noPhoto}}">Remove photo</button>
+</div>
+<label class="pg-lbl">Fit in pack
+<select class="pg-in" value="{{si.fit}}" onChange="{{si.onFit}}">
+<option value="contain">Contain — whole photo visible</option>
+<option value="cover">Cover — fill and crop</option>
+<option value="fill">Stretch to pack size</option>
+</select>
+</label>
+<label class="pg-lbl"><span class="pg-row" style="justify-content: space-between"><span>Photo zoom</span><span>{{si.zoomTxt}}</span></span><input type="range" min="40" max="250" step="1" value="{{si.zoom}}" onChange="{{si.onZoom}}"></label>
+<label class="pg-lbl"><span class="pg-row" style="justify-content: space-between"><span>Shift left / right</span><span>{{si.oxTxt}}</span></span><input type="range" min="-50" max="50" step="1" value="{{si.ox}}" onChange="{{si.onOx}}"></label>
+<label class="pg-lbl"><span class="pg-row" style="justify-content: space-between"><span>Shift up / down</span><span>{{si.oyTxt}}</span></span><input type="range" min="-50" max="50" step="1" value="{{si.oy}}" onChange="{{si.onOy}}"></label>
+<div class="pg-g2">
+<button type="button" class="pg-btn" onClick="{{si.onResetFrame}}">Reset framing</button>
+<button type="button" class="pg-btn" onClick="{{si.onApplyAll}}">Apply to all {{si.short}}</button>
+</div>
+</section>
+<section class="pg-sec" style="border-bottom: 0">
+<div class="pg-g2">
+<button type="button" class="pg-btn" onClick="{{si.onDup}}">Duplicate</button>
+<button type="button" class="pg-btn pg-danger" onClick="{{si.onDel}}">Remove from shelf</button>
+</div>
+</section>
+</sc-if>
+
+</aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this._n = 100;
+    this._drag = null;
+    const skus = this.seedSkus();
+    const byId = {};
+    skus.forEach((k) => { byId[k.id] = k; });
+    const fixtures = [
+      this.makeFixture('gantry', 0, 'Tobacco gantry'),
+      this.makeFixture('gondola', 140, 'Gondola · snacks & drinks'),
+      this.makeFixture('cooler', 262, 'Beverage cooler'),
+      this.makeFixture('impulse', 354, 'Checkout rack'),
+      this.makeFixture('pegboard', 420, 'Pegboard · hooks')
+    ];
+    const items = [];
+    const cursor = {};
+    const add = (fi, si, skuId, facings) => {
+      const fx = fixtures[fi];
+      const sh = this.sorted(fx)[si];
+      const k = byId[skuId];
+      const x = cursor[sh.id] || 0;
+      items.push({ id: this.uid(), fixtureId: fx.id, shelfId: sh.id, skuId: skuId, x: Math.round(x * 10) / 10, facings: facings, w: k.w, h: k.h, img: this.defImg() });
+      cursor[sh.id] = x + this.pitch(fx, k.w) * facings;
+    };
+    // Tobacco gantry, shelves bottom to top
+    add(0, 0, 't6', 8); add(0, 0, 't3', 12);
+    add(0, 1, 't3', 10); add(0, 1, 't5', 10);
+    add(0, 2, 't4', 10); add(0, 2, 't5', 10);
+    add(0, 3, 't1', 10); add(0, 3, 't2', 10);
+    add(0, 4, 't1', 10); add(0, 4, 't2', 10);
+    add(0, 5, 't2', 6); add(0, 5, 't1', 6); add(0, 5, 't4', 8);
+    add(0, 6, 't5', 6); add(0, 6, 't6', 6); add(0, 6, 't3', 6);
+    add(0, 7, 't4', 5); add(0, 7, 't6', 5);
+    // Gondola
+    add(1, 0, 'd3', 10);
+    add(1, 1, 's1', 4); add(1, 1, 's2', 2);
+    add(1, 2, 'd1', 7); add(1, 2, 'd2', 7);
+    add(1, 3, 'd4', 6); add(1, 3, 'd5', 6);
+    add(1, 4, 's2', 3);
+    // Cooler
+    add(2, 0, 'd3', 7);
+    add(2, 1, 'd1', 5); add(2, 1, 'd2', 5);
+    add(2, 2, 'd5', 10);
+    add(2, 3, 'd4', 9);
+    // Checkout rack
+    add(3, 0, 'c2', 6);
+    add(3, 1, 'c1', 5);
+    add(3, 2, 'c2', 3); add(3, 2, 'c3', 2);
+    add(3, 3, 'd5', 6);
+    add(3, 4, 'd3', 2);
+    // Pegboard rails, bottom to top
+    add(4, 0, 'c2', 7);
+    add(4, 1, 's1', 3);
+    add(4, 2, 'c1', 6);
+    add(4, 3, 'c3', 4);
+    this.state = {
+      name: 'Store 014 · Tobacco & checkout zone',
+      zoom: 2, showDims: true, cat: 'all', q: '',
+      sel: null, dragOff: null, msg: '',
+      fixtures: fixtures, items: items, skus: skus
+    };
+    this.onMove = this.onMove.bind(this);
+    this.onUp = this.onUp.bind(this);
+  }
+
+  componentDidMount() {
+    window.addEventListener('pointermove', this.onMove);
+    window.addEventListener('pointerup', this.onUp);
+    window.addEventListener('pointercancel', this.onUp);
+  }
+  componentWillUnmount() {
+    window.removeEventListener('pointermove', this.onMove);
+    window.removeEventListener('pointerup', this.onUp);
+    window.removeEventListener('pointercancel', this.onUp);
+    clearTimeout(this._mt);
+  }
+
+  uid() { this._n += 1; return 'n' + this._n; }
+  r05(v) { return Math.round(v * 2) / 2; }
+  r1(v) { return Math.round(v * 10) / 10; }
+  clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  defImg() { return { scale: 1, ox: 0, oy: 0, fit: 'contain' }; }
+
+  cats() {
+    return {
+      tobacco: { label: 'Tobacco', color: '#2457d6' },
+      drinks: { label: 'Drinks', color: '#e0702a' },
+      snacks: { label: 'Snacks', color: '#b8860b' },
+      sweets: { label: 'Sweets', color: '#a33ea1' }
+    };
+  }
+
+  seedSkus() {
+    const T = (id, code, name, short, w, h, color) => ({ id: id, code: code, name: name, short: short, cat: 'tobacco', w: w, h: h, color: color, text: '#ffffff', photo: null });
+    const D = (id, code, name, short, w, h, color, text) => ({ id: id, code: code, name: name, short: short, cat: 'drinks', w: w, h: h, color: color, text: text || '#ffffff', photo: null });
+    const S = (id, code, name, short, cat, w, h, color, text) => ({ id: id, code: code, name: name, short: short, cat: cat, w: w, h: h, color: color, text: text || '#ffffff', photo: null });
+    return [
+      T('t1', 'TB-101', 'Brand A Blue · KS 20', 'A Blue', 5.5, 8.8, '#24479a'),
+      T('t2', 'TB-102', 'Brand A Red · KS 20', 'A Red', 5.5, 8.8, '#b4232c'),
+      T('t3', 'TB-201', 'Brand B Silver · KS 20', 'B Silver', 5.5, 8.8, '#6f7780'),
+      T('t4', 'TB-202', 'Brand B Gold · Slims 20', 'B Gold', 4.6, 9.7, '#8f6f1f'),
+      T('t5', 'TB-301', 'Brand C Menthol · KS 20', 'C Mint', 5.5, 8.8, '#13704f'),
+      T('t6', 'TB-401', 'Brand D Compact 20', 'D Comp', 5.2, 8.0, '#33363b'),
+      D('d1', 'DR-101', 'Cola 0.5 L PET', 'Cola', 6.5, 22, '#c62828'),
+      D('d2', 'DR-102', 'Lemon soda 0.5 L PET', 'Lemon', 6.5, 22, '#4f7f1f'),
+      D('d3', 'DR-201', 'Still water 1.5 L PET', 'Water', 8.8, 31, '#1f78b4'),
+      D('d4', 'DR-301', 'Orange juice 1 L carton', 'Juice', 7, 20, '#d9660b'),
+      D('d5', 'DR-401', 'Energy drink 0.45 L can', 'Energy', 6.6, 16.8, '#22303a'),
+      S('s1', 'SN-101', 'Potato chips 90 g', 'Chips', 'snacks', 15, 22, '#e8b90e', '#1b2230'),
+      S('s2', 'SN-201', 'Salted crackers 150 g', 'Crackers', 'snacks', 18, 12, '#8a6249'),
+      S('c1', 'CF-101', 'Milk chocolate 50 g', 'Choco', 'sweets', 8, 15, '#5a3a2a'),
+      S('c2', 'CF-201', 'Mint gum 10 pcs', 'Gum', 'sweets', 7, 9, '#c2255c'),
+      S('c3', 'CF-301', 'Fruit candy 100 g', 'Candy', 'sweets', 12, 17, '#6d3fc0')
+    ];
+  }
+
+  types() {
+    return {
+      gantry: { label: 'Tobacco gantry', w: 120, h: 190, depth: 30, base: 22, header: 24, thick: 1.5, lanes: 6, shelves: 8, hang: false },
+      cabinet: { label: 'Tobacco cabinet', w: 90, h: 70, depth: 30, base: 6, header: 10, thick: 1.2, lanes: 6, shelves: 3, hang: false },
+      gondola: { label: 'Gondola shelf', w: 100, h: 200, depth: 45, base: 12, header: 0, thick: 2.5, lanes: 0, shelves: 5, hang: false },
+      cooler: { label: 'Beverage cooler', w: 70, h: 200, depth: 60, base: 22, header: 22, thick: 1.5, lanes: 0, shelves: 4, hang: false },
+      impulse: { label: 'Checkout rack', w: 45, h: 140, depth: 25, base: 8, header: 14, thick: 1, lanes: 0, shelves: 5, hang: false },
+      pegboard: { label: 'Pegboard · hooks', w: 60, h: 150, depth: 20, base: 10, header: 0, thick: 1.5, lanes: 0, shelves: 4, hang: true }
+    };
+  }
+
+  spaced(f, n) {
+    const out = [];
+    if (f.hang) {
+      const top = f.h - f.header - 8;
+      const sp = (top - f.base - 15) / Math.max(1, n - 1);
+      for (let i = 0; i < n; i++) out.push(this.r05(top - (n - 1 - i) * sp));
+    } else {
+      const g = (f.h - f.header - f.base) / Math.max(1, n);
+      for (let i = 0; i < n; i++) out.push(this.r05(f.base + i * g));
+    }
+    return out;
+  }
+
+  makeFixture(type, x, name) {
+    const t = this.types()[type];
+    const f = { id: this.uid(), type: type, name: name || t.label, x: x, w: t.w, h: t.h, depth: t.depth, base: t.base, header: t.header, thick: t.thick, lanes: t.lanes, hang: !!t.hang, doors: false, shelves: [] };
+    f.shelves = this.spaced(f, t.shelves).map((y) => ({ id: this.uid(), y: y }));
+    return f;
+  }
+
+  sorted(fx) { return fx.shelves.slice().sort((a, b) => a.y - b.y); }
+  pitch(fx, w) { return fx.lanes > 0 ? Math.max(1, Math.ceil(w / fx.lanes - 0.001)) * fx.lanes : w; }
+
+  flash(msg) {
+    this.setState({ msg: msg });
+    clearTimeout(this._mt);
+    this._mt = setTimeout(() => this.setState({ msg: '' }), 3200);
+  }
+  setFx(id, patch) { this.setState((st) => ({ fixtures: st.fixtures.map((f) => f.id === id ? Object.assign({}, f, typeof patch === 'function' ? patch(f) : patch) : f) })); }
+  setItem(id, patch) { this.setState((st) => ({ items: st.items.map((i) => i.id === id ? Object.assign({}, i, typeof patch === 'function' ? patch(i) : patch) : i) })); }
+  setSku(id, patch) { this.setState((st) => ({ skus: st.skus.map((k) => k.id === id ? Object.assign({}, k, patch) : k) })); }
+  maxRight() { return this.state.fixtures.reduce((m, f) => Math.max(m, f.x + f.w), 0); }
+  num(fn) { return (e) => { const v = parseFloat(e.target.value); if (!isNaN(v)) fn(v); }; }
+
+  // Choose shelf + x for a pack whose left edge (wall cm) and bottom (cm) are given
+  place(fx, absLeft, bottom, w, h, facings) {
+    const shs = this.sorted(fx);
+    let sh;
+    if (fx.hang) {
+      const top = bottom + h;
+      sh = shs.reduce((b, s) => (!b || Math.abs(s.y - top) < Math.abs(b.y - top)) ? s : b, null);
+    } else {
+      const c = bottom + h / 2;
+      const cands = shs.filter((s) => s.y + fx.thick <= c);
+      sh = cands.length ? cands[cands.length - 1] : shs[0];
+    }
+    const total = this.pitch(fx, w) * facings;
+    let x = absLeft - fx.x;
+    if (fx.lanes > 0) x = Math.round(x / fx.lanes) * fx.lanes;
+    x = this.clamp(x, 0, Math.max(0, fx.w - total));
+    if (fx.lanes <= 0) x = this.r05(x);
+    return { fixtureId: fx.id, shelfId: sh.id, x: this.r1(x) };
+  }
+
+  onMove(e) {
+    const d = this._drag;
+    if (!d) return;
+    const s = this.state.zoom;
+    const dx = e.clientX - d.sx;
+    const dy = e.clientY - d.sy;
+    if (d.kind === 'item') {
+      if (Math.abs(dx) + Math.abs(dy) > 3) d.moved = true;
+      if (d.moved) this.setState({ dragOff: { id: d.id, dx: dx, dy: dy } });
+    } else if (d.kind === 'facings') {
+      const n = Math.max(1, Math.round(d.f0 + dx / d.pitchPx));
+      this.setItem(d.id, { facings: n });
+    } else if (d.kind === 'resize') {
+      this.setItem(d.id, { w: Math.max(0.5, this.r05(d.w0 + dx / s)), h: Math.max(0.5, this.r05(d.h0 - dy / s)) });
+    } else if (d.kind === 'fixture') {
+      this.setFx(d.fxId, { x: Math.max(0, Math.round(d.x0 + dx / s)) });
+    } else if (d.kind === 'shelf') {
+      this.setFx(d.fxId, (f) => ({ shelves: f.shelves.map((sh) => sh.id === d.shId ? { id: sh.id, y: this.clamp(this.r05(d.y0 - dy / s), 0, f.h - f.thick) } : sh) }));
+    }
+  }
+
+  onUp(e) {
+    const d = this._drag;
+    if (!d) return;
+    this._drag = null;
+    if (d.kind !== 'item') return;
+    const st = this.state;
+    const it = st.items.find((i) => i.id === d.id);
+    if (it && d.moved) {
+      const s = st.zoom;
+      const pcx = (e.clientX - d.rect.left) / s;
+      const absLeft = pcx - d.grab;
+      const bottom = d.bottom0 - (e.clientY - d.sy) / s;
+      const fx = st.fixtures.find((f) => pcx >= f.x && pcx <= f.x + f.w);
+      if (!fx) this.flash('Dropped outside a fixture, so the SKU went back to its shelf');
+      else if (!fx.shelves.length) this.flash('That fixture has no shelves yet');
+      else this.setItem(it.id, this.place(fx, absLeft, bottom, it.w, it.h, it.facings));
+    }
+    this.setState({ dragOff: null });
+  }
+
+  addSkuToSelection(skuId) {
+    const st = this.state;
+    const sel = st.sel;
+    const k = st.skus.find((x) => x.id === skuId);
+    let fx = null, sh = null;
+    if (sel && sel.type === 'shelf') { fx = st.fixtures.find((f) => f.id === sel.fxId); sh = fx && fx.shelves.find((x) => x.id === sel.shId); }
+    else if (sel && sel.type === 'item') { const it = st.items.find((i) => i.id === sel.id); if (it) { fx = st.fixtures.find((f) => f.id === it.fixtureId); sh = fx && fx.shelves.find((x) => x.id === it.shelfId); } }
+    else if (sel && sel.type === 'fixture') {
+      fx = st.fixtures.find((f) => f.id === sel.fxId);
+      if (fx) {
+        let best = -1;
+        fx.shelves.forEach((s2) => {
+          const used = st.items.filter((i) => i.shelfId === s2.id).reduce((a, i) => a + this.pitch(fx, i.w) * i.facings, 0);
+          if (fx.w - used > best) { best = fx.w - used; sh = s2; }
+        });
+      }
+    }
+    if (!fx || !sh) { this.flash('Select a shelf first, or drag the SKU onto a shelf'); return; }
+    const end = st.items.filter((i) => i.shelfId === sh.id).reduce((m, i) => Math.max(m, i.x + this.pitch(fx, i.w) * i.facings), 0);
+    const nid = this.uid();
+    const item = { id: nid, fixtureId: fx.id, shelfId: sh.id, skuId: k.id, x: this.r1(end), facings: 1, w: k.w, h: k.h, img: this.defImg() };
+    this.setState((s2) => ({ items: s2.items.concat([item]), sel: s2.sel && s2.sel.type === 'item' ? { type: 'item', id: nid } : s2.sel }));
+  }
+
+  dupFixture(fx) {
+    const nf = Object.assign({}, fx, { id: this.uid(), name: fx.name + ' (copy)', x: Math.round(this.maxRight() + 20) });
+    const map = {};
+    nf.shelves = fx.shelves.map((s) => { const id = this.uid(); map[s.id] = id; return { id: id, y: s.y }; });
+    const copies = this.state.items.filter((i) => i.fixtureId === fx.id).map((i) => Object.assign({}, i, { id: this.uid(), fixtureId: nf.id, shelfId: map[i.shelfId], img: Object.assign({}, i.img) }));
+    this.setState((st) => ({ fixtures: st.fixtures.concat([nf]), items: st.items.concat(copies), sel: { type: 'fixture', fxId: nf.id } }));
+  }
+
+  removeShelf(fx, shId) {
+    const rest = fx.shelves.filter((s) => s.id !== shId);
+    const gone = fx.shelves.find((s) => s.id === shId);
+    if (!rest.length) {
+      this.setState((st) => ({ fixtures: st.fixtures.map((f) => f.id === fx.id ? Object.assign({}, f, { shelves: [] }) : f), items: st.items.filter((i) => i.shelfId !== shId), sel: { type: 'fixture', fxId: fx.id } }));
+      return;
+    }
+    const near = rest.reduce((b, s) => (!b || Math.abs(s.y - gone.y) < Math.abs(b.y - gone.y)) ? s : b, null);
+    this.setState((st) => ({
+      fixtures: st.fixtures.map((f) => f.id === fx.id ? Object.assign({}, f, { shelves: rest }) : f),
+      items: st.items.map((i) => i.shelfId === shId ? Object.assign({}, i, { shelfId: near.id }) : i),
+      sel: { type: 'fixture', fxId: fx.id }
+    }));
+  }
+
+  addShelf(fx) {
+    const shs = this.sorted(fx);
+    const lim = fx.h - fx.header;
+    let y;
+    if (!shs.length) y = fx.hang ? lim - 8 : fx.base;
+    else {
+      let best = -1;
+      const pts = [fx.hang ? fx.base : null].concat(shs.map((s) => s.y)).concat([lim]).filter((v) => v !== null);
+      for (let i = 0; i < pts.length - 1; i++) {
+        const g = pts[i + 1] - pts[i];
+        if (g > best) { best = g; y = pts[i] + g / 2; }
+      }
+    }
+    this.setFx(fx.id, { shelves: fx.shelves.concat([{ id: this.uid(), y: this.r05(y) }]) });
+  }
+
+  buildExport() {
+    const st = this.state;
+    const skuMap = {};
+    st.skus.forEach((k) => { skuMap[k.id] = k; });
+    const fxMap = {};
+    st.fixtures.forEach((f) => { fxMap[f.id] = f; });
+    const fixtures = st.fixtures.map((fx) => {
+      const shs = this.sorted(fx);
+      return {
+        id: fx.id, type: fx.type, typeLabel: this.types()[fx.type].label, name: fx.name,
+        x: fx.x, width: fx.w, height: fx.h, depth: fx.depth, base: fx.base, header: fx.header,
+        boardThickness: fx.thick, laneWidth: fx.lanes, hanging: fx.hang, doorsClosed: !!fx.doors,
+        shelves: shs.map((sh, i) => {
+          const upper = shs[i + 1];
+          const clearance = fx.hang ? null : this.r1((upper ? upper.y : fx.h - fx.header) - (sh.y + fx.thick));
+          return { id: sh.id, index: i + 1, kind: fx.hang ? 'rail' : 'shelf', y: sh.y, clearance: clearance };
+        })
+      };
+    });
+    const placements = st.items.filter((it) => fxMap[it.fixtureId]).map((it) => {
+      const fx = fxMap[it.fixtureId];
+      const k = skuMap[it.skuId];
+      const shs = this.sorted(fx);
+      const pitch = this.pitch(fx, it.w);
+      const im = it.img || this.defImg();
+      return {
+        id: it.id, fixtureId: fx.id, shelfId: it.shelfId, shelfIndex: shs.findIndex((s) => s.id === it.shelfId) + 1,
+        skuId: it.skuId, skuCode: k ? k.code : null, skuName: k ? k.name : null,
+        x: it.x, facings: it.facings, packWidth: it.w, packHeight: it.h,
+        facingPitch: this.r1(pitch), occupiedWidth: this.r1(pitch * it.facings),
+        photoFraming: { fit: im.fit, zoom: im.scale, offsetX: im.ox, offsetY: im.oy }
+      };
+    });
+    const skus = st.skus.map((k) => ({ id: k.id, code: k.code, name: k.name, shortName: k.short, category: k.cat, width: k.w, height: k.h, color: k.color, textColor: k.text, photo: k.photo || null }));
+    return {
+      format: 'planogram', version: 1, units: 'cm', exportedAt: new Date().toISOString(),
+      name: st.name, fixtures: fixtures, skus: skus, placements: placements,
+      summary: { fixtures: fixtures.length, placements: placements.length, facings: placements.reduce((a, p) => a + p.facings, 0) }
+    };
+  }
+
+  async exportJson() {
+    const data = JSON.stringify(this.buildExport(), null, 2);
+    const base = (this.state.name || 'planogram').replace(/[^A-Za-z0-9Ѐ-ӿ _-]+/g, ' ').trim().replace(/\s+/g, '-').slice(0, 80) || 'planogram';
+    const filename = base + '.json';
+    let dl = null;
+    try { dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; } catch (err) { dl = null; }
+    if (dl) {
+      try { await dl.save({ filename: filename, data: data }); this.flash('Exported ' + filename); }
+      catch (err) {
+        const code = err && err.code;
+        if (code === 'declined') this.flash('Export cancelled');
+        else if (code === 'rate_limited') this.flash('A save prompt is already open');
+        else this.flash('Export is not available in this view');
+      }
+      return;
+    }
+    try {
+      const url = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      this.flash('Exported ' + filename);
+    } catch (err) { this.flash('Export is not available in this view'); }
+  }
+
+  importJson(text) {
+    let d;
+    try { d = JSON.parse(text); } catch (err) { this.flash('That file is not valid JSON'); return; }
+    if (!d || d.format !== 'planogram' || !Array.isArray(d.fixtures) || !Array.isArray(d.skus) || !Array.isArray(d.placements)) { this.flash('That file is not a planogram export'); return; }
+    const types = this.types();
+    const n = (v, def) => (typeof v === 'number' && isFinite(v)) ? v : def;
+    const fixtures = d.fixtures.filter((f) => f && types[f.type]).map((f) => {
+      const t = types[f.type];
+      return { id: String(f.id), type: f.type, name: String(f.name || t.label), x: n(f.x, 0), w: n(f.width, t.w), h: n(f.height, t.h), depth: n(f.depth, t.depth), base: n(f.base, t.base), header: n(f.header, t.header), thick: n(f.boardThickness, t.thick), lanes: n(f.laneWidth, t.lanes), hang: !!f.hanging, doors: !!f.doorsClosed, shelves: (Array.isArray(f.shelves) ? f.shelves : []).map((s) => ({ id: String(s.id), y: n(s.y, 0) })) };
+    });
+    const skus = d.skus.map((k) => ({ id: String(k.id), code: String(k.code || ''), name: String(k.name || 'SKU'), short: String(k.shortName || k.name || 'SKU').slice(0, 12), cat: ['tobacco', 'drinks', 'snacks', 'sweets'].indexOf(k.category) >= 0 ? k.category : 'snacks', w: n(k.width, 8), h: n(k.height, 14), color: /^#[0-9a-fA-F]{3,8}$/.test(k.color || '') ? k.color : '#475569', text: /^#[0-9a-fA-F]{3,8}$/.test(k.textColor || '') ? k.textColor : '#ffffff', photo: typeof k.photo === 'string' && k.photo.indexOf('data:image/') === 0 ? k.photo : null }));
+    const fxIds = {};
+    fixtures.forEach((f) => { fxIds[f.id] = f; });
+    const skuIds = {};
+    skus.forEach((k) => { skuIds[k.id] = 1; });
+    const items = d.placements.filter((p) => p && fxIds[p.fixtureId] && skuIds[p.skuId] && fxIds[p.fixtureId].shelves.some((s) => s.id === String(p.shelfId))).map((p) => {
+      const fr = p.photoFraming || {};
+      return { id: String(p.id), fixtureId: String(p.fixtureId), shelfId: String(p.shelfId), skuId: String(p.skuId), x: n(p.x, 0), facings: Math.max(1, Math.round(n(p.facings, 1))), w: n(p.packWidth, 8), h: n(p.packHeight, 14), img: { fit: ['contain', 'cover', 'fill'].indexOf(fr.fit) >= 0 ? fr.fit : 'contain', scale: n(fr.zoom, 1), ox: n(fr.offsetX, 0), oy: n(fr.offsetY, 0) } };
+    });
+    this._n += 100000;
+    this.setState({ name: String(d.name || 'Imported planogram'), fixtures: fixtures, skus: skus, items: items, sel: null });
+    this.flash('Loaded ' + fixtures.length + ' fixtures and ' + items.length + ' placements');
+  }
+
+  renderVals() {
+    const st = this.state;
+    const s = st.zoom;
+    const C = this.cats();
+    const sel = st.sel;
+    const skuMap = {};
+    st.skus.forEach((k) => { skuMap[k.id] = k; });
+    const fxMap = {};
+    st.fixtures.forEach((f) => { fxMap[f.id] = f; });
+
+    // ---------- geometry + compliance ----------
+    const geo = {};
+    st.items.forEach((it) => {
+      const fx = fxMap[it.fixtureId];
+      if (!fx) return;
+      const shs = this.sorted(fx);
+      let idx = shs.findIndex((x) => x.id === it.shelfId);
+      if (idx < 0) idx = 0;
+      const sh = shs[idx];
+      if (!sh) return;
+      const pitch = this.pitch(fx, it.w);
+      const total = pitch * it.facings;
+      const msgs = [];
+      let bottom;
+      if (fx.hang) {
+        bottom = sh.y - it.h;
+        const lower = shs[idx - 1];
+        const floorLim = lower ? lower.y + fx.thick : fx.base;
+        if (bottom < floorLim - 0.01) msgs.push(lower ? 'Hangs into the hook row below (' + this.r1(it.h) + ' cm long, ' + this.r1(sh.y - floorLim) + ' cm free)' : 'Hangs below the bottom of the unit');
+      } else {
+        bottom = sh.y + fx.thick;
+        const upper = shs[idx + 1];
+        const lim = upper ? upper.y : fx.h - fx.header;
+        const gap = lim - bottom;
+        if (it.h > gap + 0.01) msgs.push('Taller than the shelf clearance (' + this.r1(it.h) + ' cm pack, ' + this.r1(gap) + ' cm free)');
+      }
+      if (it.x + total > fx.w + 0.01) msgs.push('Runs ' + this.r1(it.x + total - fx.w) + ' cm past the fixture edge');
+      geo[it.id] = { fx: fx, sh: sh, idx: idx, pitch: pitch, total: total, bottom: bottom, msgs: msgs };
+    });
+    const byShelf = {};
+    st.items.forEach((it) => { if (geo[it.id]) (byShelf[geo[it.id].sh.id] = byShelf[geo[it.id].sh.id] || []).push(it); });
+    Object.keys(byShelf).forEach((k) => {
+      const list = byShelf[k].slice().sort((a, b) => a.x - b.x);
+      for (let i = 0; i < list.length - 1; i++) {
+        const a = list[i], b = list[i + 1];
+        if (a.x + geo[a.id].total > b.x + 0.05) {
+          geo[a.id].msgs.push('Overlaps ' + skuMap[b.skuId].name);
+          geo[b.id].msgs.push('Overlaps ' + skuMap[a.skuId].name);
+        }
+      }
+    });
+    const issueItems = st.items.filter((i) => geo[i.id] && geo[i.id].msgs.length);
+
+    // ---------- pack visuals ----------
+    const packVisual = (k, it, pitch) => {
+      const im = it.img || this.defImg();
+      const tf = 'transform:translate(-50%,-50%) translate(' + im.ox + '%,' + im.oy + '%) scale(' + im.scale + ');';
+      const wpx = it.w * s, hpx = it.h * s;
+      let radius = '1px', shadow = 'inset 0 0 0 1px rgba(0,0,0,.28)';
+      if (k.cat === 'tobacco') shadow = 'inset 0 ' + (hpx * 0.2).toFixed(1) + 'px 0 0 rgba(255,255,255,.9),' + shadow;
+      if (k.cat === 'drinks') { radius = (Math.min(wpx, hpx) * 0.35).toFixed(1) + 'px ' + (Math.min(wpx, hpx) * 0.35).toFixed(1) + 'px 2px 2px'; shadow = 'inset 0 ' + (hpx * 0.07).toFixed(1) + 'px 0 0 rgba(0,0,0,.38),' + shadow; }
+      if (k.cat === 'snacks' || k.cat === 'sweets') { radius = '3px'; shadow = 'inset 0 ' + (hpx * 0.1).toFixed(1) + 'px 0 0 rgba(0,0,0,.16),' + shadow; }
+      const vertical = it.h / it.w > 2.4;
+      const label = k.short || k.name;
+      let fs = vertical ? Math.min(11, wpx * 0.5) : Math.min(11, wpx / (Math.max(3, label.length) * 0.62));
+      const pad = k.cat === 'tobacco' ? 'padding-top:' + (hpx * 0.2).toFixed(1) + 'px;box-sizing:border-box;' : '';
+      return {
+        boxStyle: 'position:relative;flex:0 0 ' + (pitch * s) + 'px;height:100%;',
+        innerStyle: 'position:absolute;bottom:0;left:' + ((pitch - it.w) / 2 * s) + 'px;width:' + wpx + 'px;height:100%;overflow:hidden;border-radius:' + radius + ';',
+        hasPhoto: !!k.photo, noPhoto: !k.photo, photo: k.photo || '',
+        imgStyle: 'position:absolute;left:50%;top:50%;width:100%;height:100%;object-fit:' + im.fit + ';' + tf + 'pointer-events:none;',
+        packStyle: 'position:absolute;left:50%;top:50%;width:100%;height:100%;' + tf + 'background:' + k.color + ';border-radius:' + radius + ';box-shadow:' + shadow + ';display:flex;align-items:center;justify-content:center;overflow:hidden;' + pad,
+        labelStyle: 'font:700 ' + fs.toFixed(1) + 'px/1 Inter,system-ui,sans-serif;color:' + (k.cat === 'tobacco' ? '#ffffff' : k.text) + ';white-space:nowrap;' + (vertical ? 'writing-mode:vertical-rl;transform:rotate(180deg);' : '') + (fs < 5 ? 'display:none;' : ''),
+        label: label
+      };
+    };
+    const thumb = (k, box) => {
+      const sc = Math.min(box[0] / k.w, box[1] / k.h, 6);
+      let radius = '1px';
+      if (k.cat === 'drinks') radius = '4px 4px 1px 1px';
+      if (k.cat === 'snacks' || k.cat === 'sweets') radius = '2px';
+      const top = k.cat === 'tobacco' ? 'box-shadow:inset 0 ' + (k.h * sc * 0.2).toFixed(1) + 'px 0 0 rgba(255,255,255,.9),inset 0 0 0 1px rgba(0,0,0,.25);' : 'box-shadow:inset 0 0 0 1px rgba(0,0,0,.25);';
+      return 'display:block;width:' + (k.w * sc).toFixed(1) + 'px;height:' + (k.h * sc).toFixed(1) + 'px;background:' + k.color + ';border-radius:' + radius + ';margin-bottom:2px;' + top;
+    };
+
+    // ---------- fixtures ----------
+    const look = {
+      gantry: { back: 'background:#24272d;', ring: '#15171b', posts: null, header: '#0f1114', base: '#111317', board: 'background:#0d0f12;border-top:1px solid #4a505a;', lanes: 'rgba(255,255,255,.16)', label: 'rgba(255,255,255,.88)' },
+      cabinet: { back: 'background:#2c3038;', ring: '#17191d', posts: null, header: '#0f1114', base: '#17191d', board: 'background:#0d0f12;border-top:1px solid #4a505a;', lanes: 'rgba(255,255,255,.16)', label: 'rgba(255,255,255,.88)' },
+      gondola: { back: 'background:#e3e6ea;', ring: null, posts: '#9aa2ad', header: '#3c4554', base: '#b6bdc7', board: 'background:linear-gradient(#e9ecf0,#a9b0ba);border-top:1px solid #f7f8fa;box-shadow:0 1px 0 rgba(0,0,0,.18);', lanes: 'rgba(27,34,48,.14)', label: 'rgba(255,255,255,.9)' },
+      cooler: { back: 'background:linear-gradient(#f4f8fb,#dfe8ee);', ring: '#1e2a33', posts: null, header: '#1d4ed8', base: '#1e2a33', board: 'background:rgba(255,255,255,.8);border-top:1px solid #ffffff;box-shadow:0 1px 0 #93a6b4;', lanes: 'rgba(27,34,48,.14)', label: 'rgba(255,255,255,.9)' },
+      impulse: { back: 'background:#efece5;', ring: null, posts: '#7d858f', header: '#374151', base: '#9aa2ad', board: 'background:repeating-linear-gradient(90deg,#6c747e 0 1px,transparent 1px 5px);border-top:2px solid #6c747e;', lanes: 'rgba(27,34,48,.14)', label: 'rgba(255,255,255,.9)' },
+      pegboard: { back: 'background-color:#d6c29c;background-image:radial-gradient(circle,rgba(70,48,14,.42) ' + Math.max(0.8, 0.3 * s).toFixed(1) + 'px,transparent ' + Math.max(1.2, 0.42 * s).toFixed(1) + 'px);background-size:' + (2.5 * s) + 'px ' + (2.5 * s) + 'px;', ring: null, posts: '#8b939c', header: '#374151', base: '#8b939c', board: 'background:#4b525c;border-radius:2px;', lanes: null, label: 'rgba(255,255,255,.9)' }
+    };
+    const fixtures = st.fixtures.map((fx) => {
+      const L = look[fx.type] || look.gondola;
+      const isSel = sel && (sel.type === 'fixture' || sel.type === 'shelf') && sel.fxId === fx.id;
+      const ringPx = L.ring ? Math.max(3, 1.5 * s) : 0;
+      let shadow = [];
+      if (L.ring) shadow.push('0 0 0 ' + ringPx + 'px ' + L.ring);
+      if (L.posts) { const p = Math.max(3, 1.6 * s); shadow.push('-' + p + 'px 0 0 ' + L.posts, p + 'px 0 0 ' + L.posts); }
+      shadow.push('0 2px 6px rgba(0,0,0,.18)');
+      const shs = this.sorted(fx);
+      const fxItems = st.items.filter((i) => i.fixtureId === fx.id && geo[i.id]);
+      let usedSum = 0;
+      const shelves = shs.map((sh, i) => {
+        const upper = shs[i + 1];
+        const lim = fx.hang ? null : (upper ? upper.y : fx.h - fx.header);
+        const gap = fx.hang ? null : Math.max(0, lim - (sh.y + fx.thick));
+        const used = fxItems.filter((it) => geo[it.id].sh.id === sh.id).reduce((a, it) => a + geo[it.id].total, 0);
+        usedSum += Math.min(fx.w, used);
+        const shSel = sel && sel.type === 'shelf' && sel.shId === sh.id;
+        const bh = Math.max(4, fx.thick * s);
+        return {
+          id: sh.id,
+          hasLanes: !fx.hang && fx.lanes > 0 && !!L.lanes,
+          laneStyle: 'position:absolute;left:0;right:0;bottom:' + ((sh.y + fx.thick) * s) + 'px;height:' + ((gap || 0) * s) + 'px;background-image:repeating-linear-gradient(to right,' + L.lanes + ' 0 1px,transparent 1px ' + (fx.lanes * s) + 'px);pointer-events:none;',
+          boardStyle: 'position:absolute;left:0;right:0;bottom:' + (sh.y * s) + 'px;height:' + bh + 'px;cursor:ns-resize;z-index:3;' + L.board + (shSel ? 'outline:2px solid #2457d6;outline-offset:1px;' : ''),
+          showLabel: st.showDims,
+          labelStyle: 'position:absolute;left:3px;bottom:' + ((fx.hang ? sh.y - 0.2 : sh.y + fx.thick) * s + (fx.hang ? -14 : 2)) + 'px;font:600 9px/1 Inter,system-ui,sans-serif;padding:2px 4px;border-radius:3px;background:' + L.label + ';color:#1b2230;pointer-events:none;z-index:8;white-space:nowrap;',
+          label: (fx.hang ? 'R' : 'S') + (i + 1) + ' · ' + sh.y + (gap !== null ? ' · ↕' + this.r1(gap) : ''),
+          title: (fx.hang ? 'Hook rail ' : 'Shelf ') + (i + 1) + ' at ' + sh.y + ' cm. Drag to move it.',
+          onDown: (e) => {
+            if (e.button !== 0) return;
+            e.stopPropagation(); e.preventDefault();
+            this._drag = { kind: 'shelf', fxId: fx.id, shId: sh.id, sx: e.clientX, sy: e.clientY, y0: sh.y };
+            this.setState({ sel: { type: 'shelf', fxId: fx.id, shId: sh.id } });
+          }
+        };
+      });
+      const fill = shs.length ? Math.round(usedSum / (fx.w * shs.length) * 100) : 0;
+      const items = fxItems.map((it) => {
+        const g = geo[it.id];
+        const k = skuMap[it.skuId];
+        const isItSel = sel && sel.type === 'item' && sel.id === it.id;
+        const drag = st.dragOff && st.dragOff.id === it.id ? st.dragOff : null;
+        let style = 'position:absolute;left:' + (it.x * s) + 'px;bottom:' + (g.bottom * s) + 'px;width:' + (g.total * s) + 'px;height:' + (it.h * s) + 'px;display:flex;cursor:grab;touch-action:none;';
+        style += 'z-index:' + (drag ? 40 : (isItSel ? 9 : 2)) + ';';
+        if (isItSel) style += 'outline:2px solid #2457d6;outline-offset:1px;';
+        else if (g.msgs.length) style += 'outline:2px dashed #d92d20;outline-offset:1px;';
+        if (drag) style += 'transform:translate(' + drag.dx + 'px,' + drag.dy + 'px);opacity:.85;cursor:grabbing;';
+        const vis = packVisual(k, it, g.pitch);
+        const faces = [];
+        for (let n = 0; n < it.facings; n++) faces.push(Object.assign({ key: n }, vis));
+        return {
+          id: it.id, style: style, faces: faces, selected: !!isItSel,
+          tag: k.short + ' · ' + it.facings + 'F',
+          title: k.name + ' · ' + it.facings + ' facings' + (g.msgs.length ? ' · ' + g.msgs.join('; ') : ''),
+          onDown: (e) => {
+            if (e.button !== 0) return;
+            e.stopPropagation(); e.preventDefault();
+            const stage = e.currentTarget.closest('[data-stage]');
+            const rect = stage.getBoundingClientRect();
+            const pcx = (e.clientX - rect.left) / s;
+            this._drag = { kind: 'item', id: it.id, sx: e.clientX, sy: e.clientY, rect: rect, grab: pcx - (fx.x + it.x), bottom0: g.bottom, moved: false };
+            this.setState({ sel: { type: 'item', id: it.id } });
+          },
+          onFacDown: (e) => {
+            e.stopPropagation(); e.preventDefault();
+            this._drag = { kind: 'facings', id: it.id, sx: e.clientX, sy: e.clientY, f0: it.facings, pitchPx: g.pitch * s };
+          },
+          onSizeDown: (e) => {
+            e.stopPropagation(); e.preventDefault();
+            this._drag = { kind: 'resize', id: it.id, sx: e.clientX, sy: e.clientY, w0: it.w, h0: it.h };
+          }
+        };
+      });
+      const hfs = this.clamp(fx.header * s * 0.34, 8, 14);
+      return {
+        id: fx.id,
+        name: fx.name,
+        meta: ' · ' + fx.w + '×' + fx.h + ' cm · ' + fill + '%',
+        style: 'position:absolute;left:' + (fx.x * s) + 'px;bottom:0;width:' + (fx.w * s) + 'px;height:' + (fx.h * s) + 'px;' + L.back + 'box-shadow:' + shadow.join(',') + ';' + (isSel ? 'outline:2px solid #2457d6;outline-offset:' + (ringPx + 4) + 'px;' : ''),
+        stripStyle: 'position:absolute;left:' + (-ringPx) + 'px;bottom:calc(100% + ' + (ringPx + 8) + 'px);max-width:' + Math.max(fx.w * s + ringPx * 2, 90) + 'px;display:flex;align-items:center;gap:5px;font:500 11px/1.3 Inter,system-ui,sans-serif;color:' + (isSel ? '#2457d6' : '#3c4554') + ';cursor:grab;white-space:nowrap;overflow:hidden;touch-action:none;',
+        hasHeader: fx.header > 0,
+        headerStyle: 'position:absolute;left:0;right:0;top:0;height:' + (fx.header * s) + 'px;background:' + L.header + ';color:#ffffff;font:600 ' + hfs.toFixed(1) + 'px/1 Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;justify-content:center;overflow:hidden;white-space:nowrap;pointer-events:none;',
+        baseStyle: 'position:absolute;left:0;right:0;bottom:0;height:' + (fx.base * s) + 'px;background:' + L.base + ';pointer-events:none;',
+        shelves: shelves,
+        items: items,
+        isCooler: fx.type === 'cooler',
+        glassStyle: 'position:absolute;left:0;right:0;top:' + (fx.header * s) + 'px;bottom:' + (fx.base * s) + 'px;background:linear-gradient(115deg,rgba(255,255,255,.28),rgba(255,255,255,0) 35%,rgba(255,255,255,.14) 60%,rgba(255,255,255,0) 75%);box-shadow:inset 0 0 0 ' + Math.max(2, 0.8 * s) + 'px #2b3a45;pointer-events:none;z-index:12;',
+        handleStyle: 'position:absolute;right:' + (2 * s) + 'px;top:' + ((fx.header + 50) * s) + 'px;width:' + Math.max(3, 1.2 * s) + 'px;height:' + (40 * s) + 'px;background:#9aa7b1;border-radius:3px;pointer-events:none;z-index:13;',
+        doorsClosed: fx.type === 'cabinet' && fx.doors,
+        doorStyle: 'position:absolute;left:0;right:0;top:' + (fx.header * s) + 'px;bottom:' + (fx.base * s) + 'px;background:linear-gradient(90deg,rgba(44,48,56,.9) 0 calc(50% - 1px),#0b0c0e calc(50% - 1px) calc(50% + 1px),rgba(44,48,56,.9) calc(50% + 1px));color:#ffffff;font:600 11px Inter,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:12;',
+        onDown: (e) => { e.stopPropagation(); this.setState({ sel: { type: 'fixture', fxId: fx.id } }); },
+        onStripDown: (e) => {
+          if (e.button !== 0) return;
+          e.stopPropagation(); e.preventDefault();
+          this._drag = { kind: 'fixture', fxId: fx.id, sx: e.clientX, sy: e.clientY, x0: fx.x };
+          this.setState({ sel: { type: 'fixture', fxId: fx.id } });
+        },
+        _fill: fill
+      };
+    });
+
+    const maxR = st.fixtures.reduce((m, f) => Math.max(m, f.x + f.w), 0);
+    const maxH = st.fixtures.reduce((m, f) => Math.max(m, f.h), 60);
+    const stageStyle = 'position:relative;width:' + ((maxR + 30) * s) + 'px;height:' + (maxH * s + 10) + 'px;min-width:300px;margin-top:20px;box-shadow:0 8px 0 #aab2bd;background-image:linear-gradient(to right,rgba(27,34,48,.07) 1px,transparent 1px);background-size:' + (10 * s) + 'px 100%;user-select:none;-webkit-user-select:none;';
+
+    // ---------- library ----------
+    const fixtureTypes = Object.keys(this.types()).map((key) => {
+      const t = this.types()[key];
+      const L = look[key];
+      const boardC = { gantry: '#7b828c', cabinet: '#7b828c', gondola: '#8a929c', cooler: '#ffffff', impulse: '#6c747e', pegboard: '#4b525c' }[key];
+      const backC = { gantry: '#24272d', cabinet: '#2c3038', gondola: '#e3e6ea', cooler: '#dfe8ee', impulse: '#efece5', pegboard: '#d6c29c' }[key];
+      const hgt = Math.round(this.clamp(t.h / 200 * 44, 18, 44));
+      const step = Math.max(4, Math.round(hgt / (t.shelves + 0.5)));
+      return {
+        key: key, label: t.label, size: t.w + '×' + t.h + ' cm · ' + t.shelves + (t.hang ? ' rails' : ' shelves'),
+        miniStyle: 'display:block;width:' + Math.round(this.clamp(t.w / 120 * 48, 22, 48)) + 'px;height:' + hgt + 'px;border-radius:2px;background:repeating-linear-gradient(to top,' + boardC + ' 0 2px,' + backC + ' 2px ' + step + 'px);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)' + (L.header && t.header ? ',inset 0 4px 0 0 ' + L.header : '') + ';',
+        onAdd: () => {
+          const f = this.makeFixture(key, Math.round(this.maxRight() + 24));
+          this.setState((s2) => ({ fixtures: s2.fixtures.concat([f]), sel: { type: 'fixture', fxId: f.id } }));
+          this.flash(t.label + ' added at the end of the wall');
+        }
+      };
+    });
+    const catKeys = ['all', 'tobacco', 'drinks', 'snacks', 'sweets'];
+    const cats = catKeys.map((key) => ({
+      label: key === 'all' ? 'All' : C[key].label,
+      cls: 'pg-tab' + (st.cat === key ? ' pg-tab-on' : ''),
+      pressed: st.cat === key ? 'true' : 'false',
+      onPick: () => this.setState({ cat: key })
+    }));
+    const q = st.q.trim().toLowerCase();
+    const skuList = st.skus.filter((k) => (st.cat === 'all' || k.cat === st.cat) && (!q || (k.name + ' ' + k.code).toLowerCase().indexOf(q) >= 0)).map((k) => ({
+      id: k.id, name: k.name,
+      meta: k.code + ' · ' + k.w + '×' + k.h + ' cm',
+      hasPhoto: !!k.photo, noPhoto: !k.photo, photo: k.photo || '',
+      thumbStyle: thumb(k, [34, 46]),
+      onDragStart: (e) => { this._dragSku = k.id; try { e.dataTransfer.setData('text/plain', k.id); e.dataTransfer.effectAllowed = 'copy'; } catch (err) {} },
+      onAdd: () => this.addSkuToSelection(k.id)
+    }));
+
+    // ---------- summary ----------
+    const placedSkus = {};
+    let facings = 0;
+    const catUse = {};
+    let usedAll = 0;
+    st.items.forEach((it) => {
+      if (!geo[it.id]) return;
+      placedSkus[it.skuId] = 1;
+      facings += it.facings;
+      const c = skuMap[it.skuId].cat;
+      catUse[c] = (catUse[c] || 0) + geo[it.id].total;
+      usedAll += geo[it.id].total;
+    });
+    const totalLinear = st.fixtures.reduce((a, f) => a + f.w * f.shelves.length, 0);
+    const sum = {
+      fixtures: st.fixtures.length,
+      skus: Object.keys(placedSkus).length,
+      facings: facings,
+      fill: totalLinear ? Math.round(Math.min(usedAll, totalLinear) / totalLinear * 100) + '%' : '0%',
+      cats: Object.keys(C).map((c) => {
+        const p = usedAll ? (catUse[c] || 0) / usedAll * 100 : 0;
+        return { label: C[c].label + ' · ' + Math.round(catUse[c] || 0) + ' cm', pct: Math.round(p) + '%', swatch: 'display:inline-block;width:10px;height:10px;border-radius:2px;background:' + C[c].color + ';', bar: 'height:6px;width:' + p.toFixed(1) + '%;background:' + C[c].color + ';border-radius:3px;' };
+      }),
+      issues: issueItems.map((it) => {
+        const g = geo[it.id];
+        return { title: skuMap[it.skuId].name, text: g.fx.name + ', ' + (g.fx.hang ? 'rail ' : 'shelf ') + (g.idx + 1) + ': ' + g.msgs.join('; '), onPick: () => this.setState({ sel: { type: 'item', id: it.id } }) };
+      }),
+      noIssues: issueItems.length === 0
+    };
+
+    // ---------- inspector: fixture ----------
+    let fi = null;
+    const selFxObj = sel && (sel.type === 'fixture' || sel.type === 'shelf') ? fxMap[sel.fxId] : null;
+    if (selFxObj) {
+      const fx = selFxObj;
+      const shs = this.sorted(fx);
+      const upd = (key, min) => this.num((v) => this.setFx(fx.id, { [key]: Math.max(min, v) }));
+      const fview = fixtures.find((f) => f.id === fx.id);
+      fi = {
+        typeLabel: this.types()[fx.type].label,
+        fill: (fview ? fview._fill : 0) + '%',
+        name: fx.name, w: fx.w, h: fx.h, depth: fx.depth, base: fx.base, header: fx.header, thick: fx.thick, lanes: fx.lanes,
+        onName: (e) => this.setFx(fx.id, { name: e.target.value }),
+        onW: upd('w', 20), onH: upd('h', 30), onDepth: upd('depth', 5), onBase: upd('base', 0), onHeader: upd('header', 0), onThick: upd('thick', 0.5), onLanes: upd('lanes', 0),
+        hasDoors: fx.type === 'cabinet', doors: !!fx.doors,
+        onDoors: (e) => this.setFx(fx.id, { doors: e.target.checked }),
+        shelfWord: fx.hang ? 'Hook rails' : 'Shelves', oneWord: fx.hang ? 'rail' : 'shelf', count: shs.length,
+        shelves: shs.slice().reverse().map((sh) => {
+          const i = shs.indexOf(sh);
+          const upper = shs[i + 1];
+          const gap = fx.hang ? null : (upper ? upper.y : fx.h - fx.header) - (sh.y + fx.thick);
+          const on = sel.type === 'shelf' && sel.shId === sh.id;
+          return {
+            n: (fx.hang ? 'R' : 'S') + (i + 1), y: sh.y,
+            aria: (fx.hang ? 'Rail ' : 'Shelf ') + (i + 1) + ' height in cm',
+            removeLabel: 'Remove ' + (fx.hang ? 'rail ' : 'shelf ') + (i + 1),
+            gap: gap === null ? st.items.filter((x) => x.shelfId === sh.id).length + ' SKUs' : '↕ ' + this.r1(gap) + ' cm free',
+            rowStyle: 'display:flex;align-items:center;gap:6px;border-radius:8px;padding:2px;' + (on ? 'background:#eaf0fd;box-shadow:inset 0 0 0 1px #2457d6;' : ''),
+            onY: this.num((v) => this.setFx(fx.id, (f) => ({ shelves: f.shelves.map((x) => x.id === sh.id ? { id: x.id, y: this.clamp(v, 0, f.h - f.thick) } : x) }))),
+            onRemove: () => this.removeShelf(fx, sh.id),
+            onPick: () => this.setState({ sel: { type: 'shelf', fxId: fx.id, shId: sh.id } })
+          };
+        }),
+        onAddShelf: () => this.addShelf(fx),
+        onDistribute: () => {
+          const ys = this.spaced(fx, shs.length);
+          const ids = shs.map((x) => x.id);
+          this.setFx(fx.id, { shelves: ids.map((id, i) => ({ id: id, y: ys[i] })) });
+        },
+        onDup: () => this.dupFixture(fx),
+        onDel: () => this.setState((s2) => ({ fixtures: s2.fixtures.filter((f) => f.id !== fx.id), items: s2.items.filter((i) => i.fixtureId !== fx.id), sel: null })),
+        onClear: () => this.setState((s2) => ({ items: s2.items.filter((i) => i.fixtureId !== fx.id) }))
+      };
+    }
+
+    // ---------- inspector: item ----------
+    let si = null;
+    const selIt = sel && sel.type === 'item' ? st.items.find((i) => i.id === sel.id) : null;
+    if (selIt && geo[selIt.id]) {
+      const it = selIt, g = geo[it.id], k = skuMap[it.skuId], im = it.img || this.defImg();
+      const setImg = (patch) => this.setItem(it.id, (i) => ({ img: Object.assign({}, i.img || this.defImg(), patch) }));
+      si = {
+        name: k.name, code: k.code, cat: C[k.cat] ? C[k.cat].label : k.cat, short: k.short,
+        where: g.fx.name + ' · ' + (g.fx.hang ? 'rail ' : 'shelf ') + (g.idx + 1) + ' at ' + g.sh.y + ' cm',
+        hasPhoto: !!k.photo, noPhoto: !k.photo, photo: k.photo || '',
+        thumbStyle: thumb(k, [48, 64]),
+        issues: g.msgs.map((m) => ({ text: m })),
+        facings: it.facings, w: it.w, h: it.h, x: it.x,
+        span: 'Occupies ' + this.r1(g.total) + ' cm of ' + g.fx.w + ' cm' + (g.fx.lanes > 0 ? ' · ' + this.r1(g.pitch / g.fx.lanes) + ' lane(s) of ' + g.fx.lanes + ' cm per facing' : ''),
+        onName: (e) => this.setSku(k.id, { name: e.target.value }),
+        onFacMinus: () => this.setItem(it.id, { facings: Math.max(1, it.facings - 1) }),
+        onFacPlus: () => this.setItem(it.id, { facings: it.facings + 1 }),
+        onW: this.num((v) => this.setItem(it.id, { w: Math.max(0.5, v) })),
+        onH: this.num((v) => this.setItem(it.id, { h: Math.max(0.5, v) })),
+        onX: this.num((v) => this.setItem(it.id, { x: Math.max(0, v) })),
+        onResetSize: () => this.setItem(it.id, { w: k.w, h: k.h }),
+        onSaveSize: () => { this.setSku(k.id, { w: it.w, h: it.h }); this.flash('Saved ' + it.w + '×' + it.h + ' cm as the default size of ' + k.name); },
+        onPhoto: (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            this.setSku(k.id, { photo: String(reader.result) });
+            this.flash('Photo applied to every placement of ' + k.name);
+          };
+          reader.readAsDataURL(file);
+          e.target.value = '';
+        },
+        onRemovePhoto: () => this.setSku(k.id, { photo: null }),
+        fit: im.fit,
+        onFit: (e) => setImg({ fit: e.target.value }),
+        zoom: Math.round(im.scale * 100), zoomTxt: Math.round(im.scale * 100) + '%',
+        onZoom: (e) => setImg({ scale: parseFloat(e.target.value) / 100 }),
+        ox: im.ox, oxTxt: im.ox + '%', onOx: (e) => setImg({ ox: parseFloat(e.target.value) }),
+        oy: im.oy, oyTxt: im.oy + '%', onOy: (e) => setImg({ oy: parseFloat(e.target.value) }),
+        onResetFrame: () => this.setItem(it.id, { img: this.defImg() }),
+        onApplyAll: () => { this.setState((s2) => ({ items: s2.items.map((i) => i.skuId === k.id ? Object.assign({}, i, { img: Object.assign({}, im) }) : i) })); this.flash('Framing copied to every ' + k.name + ' placement'); },
+        onDup: () => {
+          const nid = this.uid();
+          const copy = Object.assign({}, it, { id: nid, x: this.r1(it.x + g.total), img: Object.assign({}, im) });
+          this.setState((s2) => ({ items: s2.items.concat([copy]), sel: { type: 'item', id: nid } }));
+        },
+        onDel: () => this.setState((s2) => ({ items: s2.items.filter((i) => i.id !== it.id), sel: null }))
+      };
+    }
+
+    const n = issueItems.length;
+    return {
+      name: st.name,
+      onName: (e) => this.setState({ name: e.target.value }),
+      hasMsg: !!st.msg, msg: st.msg,
+      issueLabel: n ? n + (n === 1 ? ' issue' : ' issues') : 'No issues',
+      issueBtnStyle: n ? 'color:#b42318;border-color:#f3c7c2;background:#fff7f6;' : 'color:#13704f;',
+      selectSummary: () => this.setState({ sel: null }),
+      onExport: () => { this.exportJson(); },
+      onImport: (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => this.importJson(String(reader.result));
+        reader.readAsText(file);
+        e.target.value = '';
+      },
+      dimsLabel: st.showDims ? 'Hide shelf heights' : 'Show shelf heights',
+      dimsPressed: st.showDims ? 'true' : 'false',
+      toggleDims: () => this.setState({ showDims: !st.showDims }),
+      zoomLabel: Math.round(st.zoom * 10) + ' px/dm',
+      zoomIn: () => this.setState({ zoom: Math.min(8, this.r1(st.zoom * 1.25)) }),
+      zoomOut: () => this.setState({ zoom: Math.max(0.8, this.r1(st.zoom / 1.25)) }),
+      fixtureTypes: fixtureTypes,
+      newSku: () => {
+        const id = this.uid();
+        const cat = st.cat === 'all' ? 'snacks' : st.cat;
+        const k = { id: id, code: 'NEW-' + id.slice(1), name: 'New SKU ' + id.slice(1), short: 'New', cat: cat, w: 8, h: 14, color: '#475569', text: '#ffffff', photo: null };
+        this.setState((s2) => ({ skus: [k].concat(s2.skus), q: '' }));
+        this.flash('New SKU added to the top of the library. Place it, then upload its photo and rename it.');
+      },
+      q: st.q,
+      onSearch: (e) => this.setState({ q: e.target.value }),
+      cats: cats,
+      skuList: skuList,
+      stageStyle: stageStyle,
+      onStageDown: () => this.setState({ sel: null }),
+      onDragOver: (e) => { e.preventDefault(); try { e.dataTransfer.dropEffect = 'copy'; } catch (err) {} },
+      onDrop: (e) => {
+        e.preventDefault();
+        let id = null;
+        try { id = e.dataTransfer.getData('text/plain'); } catch (err) {}
+        id = id || this._dragSku;
+        const k = st.skus.find((x) => x.id === id);
+        if (!k) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const pcx = (e.clientX - rect.left) / s;
+        const pcy = (rect.bottom - e.clientY) / s;
+        const fx = st.fixtures.find((f) => pcx >= f.x && pcx <= f.x + f.w);
+        if (!fx) { this.flash('Drop the SKU onto a fixture'); return; }
+        if (!fx.shelves.length) { this.flash('That fixture has no shelves yet'); return; }
+        const p = this.place(fx, pcx - this.pitch(fx, k.w) / 2, pcy - k.h / 2, k.w, k.h, 1);
+        const nid = this.uid();
+        this.setState((s2) => ({ items: s2.items.concat([Object.assign({ id: nid, skuId: k.id, facings: 1, w: k.w, h: k.h, img: this.defImg() }, p)]), sel: { type: 'item', id: nid } }));
+      },
+      fixtures: fixtures,
+      selNone: !fi && !si,
+      selFx: !!fi,
+      selItem: !!si,
+      fi: fi || {},
+      si: si || {},
+      sum: sum
+    };
+  }
+}
+</script>
+</body>
+</html>

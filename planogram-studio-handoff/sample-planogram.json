@@ -1,0 +1,1343 @@
+{
+  "format": "planogram",
+  "version": 1,
+  "units": "cm",
+  "exportedAt": "2026-10-28T00:00:00.000Z",
+  "name": "Store 014 · Tobacco & checkout zone",
+  "fixtures": [
+    {
+      "id": "n101",
+      "type": "gantry",
+      "typeLabel": "Tobacco gantry",
+      "name": "Tobacco gantry",
+      "x": 0,
+      "width": 120,
+      "height": 190,
+      "depth": 30,
+      "base": 22,
+      "header": 24,
+      "boardThickness": 1.5,
+      "laneWidth": 6,
+      "hanging": false,
+      "doorsClosed": false,
+      "shelves": [
+        {
+          "id": "n102",
+          "index": 1,
+          "kind": "shelf",
+          "y": 22,
+          "clearance": 16.5
+        },
+        {
+          "id": "n103",
+          "index": 2,
+          "kind": "shelf",
+          "y": 40,
+          "clearance": 16.5
+        },
+        {
+          "id": "n104",
+          "index": 3,
+          "kind": "shelf",
+          "y": 58,
+          "clearance": 16.5
+        },
+        {
+          "id": "n105",
+          "index": 4,
+          "kind": "shelf",
+          "y": 76,
+          "clearance": 16.5
+        },
+        {
+          "id": "n106",
+          "index": 5,
+          "kind": "shelf",
+          "y": 94,
+          "clearance": 16.5
+        },
+        {
+          "id": "n107",
+          "index": 6,
+          "kind": "shelf",
+          "y": 112,
+          "clearance": 16.5
+        },
+        {
+          "id": "n108",
+          "index": 7,
+          "kind": "shelf",
+          "y": 130,
+          "clearance": 16.5
+        },
+        {
+          "id": "n109",
+          "index": 8,
+          "kind": "shelf",
+          "y": 148,
+          "clearance": 16.5
+        }
+      ]
+    },
+    {
+      "id": "n110",
+      "type": "gondola",
+      "typeLabel": "Gondola shelf",
+      "name": "Gondola · snacks & drinks",
+      "x": 140,
+      "width": 100,
+      "height": 200,
+      "depth": 45,
+      "base": 12,
+      "header": 0,
+      "boardThickness": 2.5,
+      "laneWidth": 0,
+      "hanging": false,
+      "doorsClosed": false,
+      "shelves": [
+        {
+          "id": "n111",
+          "index": 1,
+          "kind": "shelf",
+          "y": 12,
+          "clearance": 35
+        },
+        {
+          "id": "n112",
+          "index": 2,
+          "kind": "shelf",
+          "y": 49.5,
+          "clearance": 35
+        },
+        {
+          "id": "n113",
+          "index": 3,
+          "kind": "shelf",
+          "y": 87,
+          "clearance": 35.5
+        },
+        {
+          "id": "n114",
+          "index": 4,
+          "kind": "shelf",
+          "y": 125,
+          "clearance": 35
+        },
+        {
+          "id": "n115",
+          "index": 5,
+          "kind": "shelf",
+          "y": 162.5,
+          "clearance": 35
+        }
+      ]
+    },
+    {
+      "id": "n116",
+      "type": "cooler",
+      "typeLabel": "Beverage cooler",
+      "name": "Beverage cooler",
+      "x": 262,
+      "width": 70,
+      "height": 200,
+      "depth": 60,
+      "base": 22,
+      "header": 22,
+      "boardThickness": 1.5,
+      "laneWidth": 0,
+      "hanging": false,
+      "doorsClosed": false,
+      "shelves": [
+        {
+          "id": "n117",
+          "index": 1,
+          "kind": "shelf",
+          "y": 22,
+          "clearance": 37.5
+        },
+        {
+          "id": "n118",
+          "index": 2,
+          "kind": "shelf",
+          "y": 61,
+          "clearance": 37.5
+        },
+        {
+          "id": "n119",
+          "index": 3,
+          "kind": "shelf",
+          "y": 100,
+          "clearance": 37.5
+        },
+        {
+          "id": "n120",
+          "index": 4,
+          "kind": "shelf",
+          "y": 139,
+          "clearance": 37.5
+        }
+      ]
+    },
+    {
+      "id": "n121",
+      "type": "impulse",
+      "typeLabel": "Checkout rack",
+      "name": "Checkout rack",
+      "x": 354,
+      "width": 45,
+      "height": 140,
+      "depth": 25,
+      "base": 8,
+      "header": 14,
+      "boardThickness": 1,
+      "laneWidth": 0,
+      "hanging": false,
+      "doorsClosed": false,
+      "shelves": [
+        {
+          "id": "n122",
+          "index": 1,
+          "kind": "shelf",
+          "y": 8,
+          "clearance": 22.5
+        },
+        {
+          "id": "n123",
+          "index": 2,
+          "kind": "shelf",
+          "y": 31.5,
+          "clearance": 22.5
+        },
+        {
+          "id": "n124",
+          "index": 3,
+          "kind": "shelf",
+          "y": 55,
+          "clearance": 23
+        },
+        {
+          "id": "n125",
+          "index": 4,
+          "kind": "shelf",
+          "y": 79,
+          "clearance": 22.5
+        },
+        {
+          "id": "n126",
+          "index": 5,
+          "kind": "shelf",
+          "y": 102.5,
+          "clearance": 22.5
+        }
+      ]
+    },
+    {
+      "id": "n127",
+      "type": "pegboard",
+      "typeLabel": "Pegboard · hooks",
+      "name": "Pegboard · hooks",
+      "x": 420,
+      "width": 60,
+      "height": 150,
+      "depth": 20,
+      "base": 10,
+      "header": 0,
+      "boardThickness": 1.5,
+      "laneWidth": 0,
+      "hanging": true,
+      "doorsClosed": false,
+      "shelves": [
+        {
+          "id": "n128",
+          "index": 1,
+          "kind": "rail",
+          "y": 25,
+          "clearance": null
+        },
+        {
+          "id": "n129",
+          "index": 2,
+          "kind": "rail",
+          "y": 64,
+          "clearance": null
+        },
+        {
+          "id": "n130",
+          "index": 3,
+          "kind": "rail",
+          "y": 103,
+          "clearance": null
+        },
+        {
+          "id": "n131",
+          "index": 4,
+          "kind": "rail",
+          "y": 142,
+          "clearance": null
+        }
+      ]
+    }
+  ],
+  "skus": [
+    {
+      "id": "t1",
+      "code": "TB-101",
+      "name": "Brand A Blue · KS 20",
+      "shortName": "A Blue",
+      "category": "tobacco",
+      "width": 5.5,
+      "height": 8.8,
+      "color": "#24479a",
+      "textColor": "#ffffff",
+      "photo": null
+    },
+    {
+      "id": "t2",
+      "code": "TB-102",
+      "name": "Brand A Red · KS 20",
+      "shortName": "A Red",
+      "category": "tobacco",
+      "width": 5.5,
+      "height": 8.8,
+      "color": "#b4232c",
+      "textColor": "#ffffff",
+      "photo": null
+    },
+    {
+      "id": "t3",
+      "code": "TB-201",
+      "name": "Brand B Silver · KS 20",
+      "shortName": "B Silver",
+      "category": "tobacco",
+      "width": 5.5,
+      "height": 8.8,
+      "color": "#6f7780",
+      "textColor": "#ffffff",
+      "photo": null
+    },
+    {
+      "id": "t4",
+      "code": "TB-202",
+      "name": "Brand B Gold · Slims 20",
+      "shortName": "B Gold",
+      "category": "tobacco",
+      "width": 4.6,
+      "height": 9.7,
+      "color": "#8f6f1f",
+      "textColor": "#ffffff",
+      "photo": null
+    },
+    {
+      "id": "t5",
+      "code": "TB-301",
+      "name": "Brand C Menthol · KS 20",
+      "shortName": "C Mint",
+      "category": "tobacco",
+      "width": 5.5,
+      "height": 8.8,
+      "color": "#13704f",
+      "textColor": "#ffffff",
+      "photo": null
+    },
+    {
+      "id": "t6",
+      "code": "TB-401",
+      "name": "Brand D Compact 20",
+      "shortName": "D Comp",
+      "category": "tobacco",
+      "width": 5.2,
+      "height": 8,
+      "color": "#33363b",
+      "textColor": "#ffffff",
+      "photo": null
+    },
+    {
+      "id": "d1",
+      "code": "DR-101",
+      "name": "Cola 0.5 L PET",
+      "shortName": "Cola",
+      "category": "drinks",
+      "width": 6.5,
+      "height": 22,
+      "color": "#c62828",
+      "textColor": "#ffffff",
+      "photo": null
+    },
+    {
+      "id": "d2",
+      "code": "DR-102",
+      "name": "Lemon soda 0.5 L PET",
+      "shortName": "Lemon",
+      "category": "drinks",
+      "width": 6.5,
+      "height": 22,
+      "color": "#4f7f1f",
+      "textColor": "#ffffff",
+      "photo": null
+    },
+    {
+      "id": "d3",
+      "code": "DR-201",
+      "name": "Still water 1.5 L PET",
+      "shortName": "Water",
+      "category": "drinks",
+      "width": 8.8,
+      "height": 31,
+      "color": "#1f78b4",
+      "textColor": "#ffffff",
+      "photo": null
+    },
+    {
+      "id": "d4",
+      "code": "DR-301",
+      "name": "Orange juice 1 L carton",
+      "shortName": "Juice",
+      "category": "drinks",
+      "width": 7,
+      "height": 20,
+      "color": "#d9660b",
+      "textColor": "#ffffff",
+      "photo": null
+    },
+    {
+      "id": "d5",
+      "code": "DR-401",
+      "name": "Energy drink 0.45 L can",
+      "shortName": "Energy",
+      "category": "drinks",
+      "width": 6.6,
+      "height": 16.8,
+      "color": "#22303a",
+      "textColor": "#ffffff",
+      "photo": null
+    },
+    {
+      "id": "s1",
+      "code": "SN-101",
+      "name": "Potato chips 90 g",
+      "shortName": "Chips",
+      "category": "snacks",
+      "width": 15,
+      "height": 22,
+      "color": "#e8b90e",
+      "textColor": "#1b2230",
+      "photo": null
+    },
+    {
+      "id": "s2",
+      "code": "SN-201",
+      "name": "Salted crackers 150 g",
+      "shortName": "Crackers",
+      "category": "snacks",
+      "width": 18,
+      "height": 12,
+      "color": "#8a6249",
+      "textColor": "#ffffff",
+      "photo": null
+    },
+    {
+      "id": "c1",
+      "code": "CF-101",
+      "name": "Milk chocolate 50 g",
+      "shortName": "Choco",
+      "category": "sweets",
+      "width": 8,
+      "height": 15,
+      "color": "#5a3a2a",
+      "textColor": "#ffffff",
+      "photo": null
+    },
+    {
+      "id": "c2",
+      "code": "CF-201",
+      "name": "Mint gum 10 pcs",
+      "shortName": "Gum",
+      "category": "sweets",
+      "width": 7,
+      "height": 9,
+      "color": "#c2255c",
+      "textColor": "#ffffff",
+      "photo": null
+    },
+    {
+      "id": "c3",
+      "code": "CF-301",
+      "name": "Fruit candy 100 g",
+      "shortName": "Candy",
+      "category": "sweets",
+      "width": 12,
+      "height": 17,
+      "color": "#6d3fc0",
+      "textColor": "#ffffff",
+      "photo": null
+    }
+  ],
+  "placements": [
+    {
+      "id": "n132",
+      "fixtureId": "n101",
+      "shelfId": "n102",
+      "shelfIndex": 1,
+      "skuId": "t6",
+      "skuCode": "TB-401",
+      "skuName": "Brand D Compact 20",
+      "x": 0,
+      "facings": 8,
+      "packWidth": 5.2,
+      "packHeight": 8,
+      "facingPitch": 6,
+      "occupiedWidth": 48,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n133",
+      "fixtureId": "n101",
+      "shelfId": "n102",
+      "shelfIndex": 1,
+      "skuId": "t3",
+      "skuCode": "TB-201",
+      "skuName": "Brand B Silver · KS 20",
+      "x": 48,
+      "facings": 12,
+      "packWidth": 5.5,
+      "packHeight": 8.8,
+      "facingPitch": 6,
+      "occupiedWidth": 72,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n134",
+      "fixtureId": "n101",
+      "shelfId": "n103",
+      "shelfIndex": 2,
+      "skuId": "t3",
+      "skuCode": "TB-201",
+      "skuName": "Brand B Silver · KS 20",
+      "x": 0,
+      "facings": 10,
+      "packWidth": 5.5,
+      "packHeight": 8.8,
+      "facingPitch": 6,
+      "occupiedWidth": 60,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n135",
+      "fixtureId": "n101",
+      "shelfId": "n103",
+      "shelfIndex": 2,
+      "skuId": "t5",
+      "skuCode": "TB-301",
+      "skuName": "Brand C Menthol · KS 20",
+      "x": 60,
+      "facings": 10,
+      "packWidth": 5.5,
+      "packHeight": 8.8,
+      "facingPitch": 6,
+      "occupiedWidth": 60,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n136",
+      "fixtureId": "n101",
+      "shelfId": "n104",
+      "shelfIndex": 3,
+      "skuId": "t4",
+      "skuCode": "TB-202",
+      "skuName": "Brand B Gold · Slims 20",
+      "x": 0,
+      "facings": 10,
+      "packWidth": 4.6,
+      "packHeight": 9.7,
+      "facingPitch": 6,
+      "occupiedWidth": 60,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n137",
+      "fixtureId": "n101",
+      "shelfId": "n104",
+      "shelfIndex": 3,
+      "skuId": "t5",
+      "skuCode": "TB-301",
+      "skuName": "Brand C Menthol · KS 20",
+      "x": 60,
+      "facings": 10,
+      "packWidth": 5.5,
+      "packHeight": 8.8,
+      "facingPitch": 6,
+      "occupiedWidth": 60,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n138",
+      "fixtureId": "n101",
+      "shelfId": "n105",
+      "shelfIndex": 4,
+      "skuId": "t1",
+      "skuCode": "TB-101",
+      "skuName": "Brand A Blue · KS 20",
+      "x": 0,
+      "facings": 10,
+      "packWidth": 5.5,
+      "packHeight": 8.8,
+      "facingPitch": 6,
+      "occupiedWidth": 60,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n139",
+      "fixtureId": "n101",
+      "shelfId": "n105",
+      "shelfIndex": 4,
+      "skuId": "t2",
+      "skuCode": "TB-102",
+      "skuName": "Brand A Red · KS 20",
+      "x": 60,
+      "facings": 10,
+      "packWidth": 5.5,
+      "packHeight": 8.8,
+      "facingPitch": 6,
+      "occupiedWidth": 60,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n140",
+      "fixtureId": "n101",
+      "shelfId": "n106",
+      "shelfIndex": 5,
+      "skuId": "t1",
+      "skuCode": "TB-101",
+      "skuName": "Brand A Blue · KS 20",
+      "x": 0,
+      "facings": 10,
+      "packWidth": 5.5,
+      "packHeight": 8.8,
+      "facingPitch": 6,
+      "occupiedWidth": 60,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n141",
+      "fixtureId": "n101",
+      "shelfId": "n106",
+      "shelfIndex": 5,
+      "skuId": "t2",
+      "skuCode": "TB-102",
+      "skuName": "Brand A Red · KS 20",
+      "x": 60,
+      "facings": 10,
+      "packWidth": 5.5,
+      "packHeight": 8.8,
+      "facingPitch": 6,
+      "occupiedWidth": 60,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n142",
+      "fixtureId": "n101",
+      "shelfId": "n107",
+      "shelfIndex": 6,
+      "skuId": "t2",
+      "skuCode": "TB-102",
+      "skuName": "Brand A Red · KS 20",
+      "x": 0,
+      "facings": 6,
+      "packWidth": 5.5,
+      "packHeight": 8.8,
+      "facingPitch": 6,
+      "occupiedWidth": 36,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n143",
+      "fixtureId": "n101",
+      "shelfId": "n107",
+      "shelfIndex": 6,
+      "skuId": "t1",
+      "skuCode": "TB-101",
+      "skuName": "Brand A Blue · KS 20",
+      "x": 36,
+      "facings": 6,
+      "packWidth": 5.5,
+      "packHeight": 8.8,
+      "facingPitch": 6,
+      "occupiedWidth": 36,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n144",
+      "fixtureId": "n101",
+      "shelfId": "n107",
+      "shelfIndex": 6,
+      "skuId": "t4",
+      "skuCode": "TB-202",
+      "skuName": "Brand B Gold · Slims 20",
+      "x": 72,
+      "facings": 8,
+      "packWidth": 4.6,
+      "packHeight": 9.7,
+      "facingPitch": 6,
+      "occupiedWidth": 48,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n145",
+      "fixtureId": "n101",
+      "shelfId": "n108",
+      "shelfIndex": 7,
+      "skuId": "t5",
+      "skuCode": "TB-301",
+      "skuName": "Brand C Menthol · KS 20",
+      "x": 0,
+      "facings": 6,
+      "packWidth": 5.5,
+      "packHeight": 8.8,
+      "facingPitch": 6,
+      "occupiedWidth": 36,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n146",
+      "fixtureId": "n101",
+      "shelfId": "n108",
+      "shelfIndex": 7,
+      "skuId": "t6",
+      "skuCode": "TB-401",
+      "skuName": "Brand D Compact 20",
+      "x": 36,
+      "facings": 6,
+      "packWidth": 5.2,
+      "packHeight": 8,
+      "facingPitch": 6,
+      "occupiedWidth": 36,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n147",
+      "fixtureId": "n101",
+      "shelfId": "n108",
+      "shelfIndex": 7,
+      "skuId": "t3",
+      "skuCode": "TB-201",
+      "skuName": "Brand B Silver · KS 20",
+      "x": 72,
+      "facings": 6,
+      "packWidth": 5.5,
+      "packHeight": 8.8,
+      "facingPitch": 6,
+      "occupiedWidth": 36,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n148",
+      "fixtureId": "n101",
+      "shelfId": "n109",
+      "shelfIndex": 8,
+      "skuId": "t4",
+      "skuCode": "TB-202",
+      "skuName": "Brand B Gold · Slims 20",
+      "x": 0,
+      "facings": 5,
+      "packWidth": 4.6,
+      "packHeight": 9.7,
+      "facingPitch": 6,
+      "occupiedWidth": 30,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n149",
+      "fixtureId": "n101",
+      "shelfId": "n109",
+      "shelfIndex": 8,
+      "skuId": "t6",
+      "skuCode": "TB-401",
+      "skuName": "Brand D Compact 20",
+      "x": 30,
+      "facings": 5,
+      "packWidth": 5.2,
+      "packHeight": 8,
+      "facingPitch": 6,
+      "occupiedWidth": 30,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n150",
+      "fixtureId": "n110",
+      "shelfId": "n111",
+      "shelfIndex": 1,
+      "skuId": "d3",
+      "skuCode": "DR-201",
+      "skuName": "Still water 1.5 L PET",
+      "x": 0,
+      "facings": 10,
+      "packWidth": 8.8,
+      "packHeight": 31,
+      "facingPitch": 8.8,
+      "occupiedWidth": 88,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n151",
+      "fixtureId": "n110",
+      "shelfId": "n112",
+      "shelfIndex": 2,
+      "skuId": "s1",
+      "skuCode": "SN-101",
+      "skuName": "Potato chips 90 g",
+      "x": 0,
+      "facings": 4,
+      "packWidth": 15,
+      "packHeight": 22,
+      "facingPitch": 15,
+      "occupiedWidth": 60,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n152",
+      "fixtureId": "n110",
+      "shelfId": "n112",
+      "shelfIndex": 2,
+      "skuId": "s2",
+      "skuCode": "SN-201",
+      "skuName": "Salted crackers 150 g",
+      "x": 60,
+      "facings": 2,
+      "packWidth": 18,
+      "packHeight": 12,
+      "facingPitch": 18,
+      "occupiedWidth": 36,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n153",
+      "fixtureId": "n110",
+      "shelfId": "n113",
+      "shelfIndex": 3,
+      "skuId": "d1",
+      "skuCode": "DR-101",
+      "skuName": "Cola 0.5 L PET",
+      "x": 0,
+      "facings": 7,
+      "packWidth": 6.5,
+      "packHeight": 22,
+      "facingPitch": 6.5,
+      "occupiedWidth": 45.5,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n154",
+      "fixtureId": "n110",
+      "shelfId": "n113",
+      "shelfIndex": 3,
+      "skuId": "d2",
+      "skuCode": "DR-102",
+      "skuName": "Lemon soda 0.5 L PET",
+      "x": 45.5,
+      "facings": 7,
+      "packWidth": 6.5,
+      "packHeight": 22,
+      "facingPitch": 6.5,
+      "occupiedWidth": 45.5,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n155",
+      "fixtureId": "n110",
+      "shelfId": "n114",
+      "shelfIndex": 4,
+      "skuId": "d4",
+      "skuCode": "DR-301",
+      "skuName": "Orange juice 1 L carton",
+      "x": 0,
+      "facings": 6,
+      "packWidth": 7,
+      "packHeight": 20,
+      "facingPitch": 7,
+      "occupiedWidth": 42,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n156",
+      "fixtureId": "n110",
+      "shelfId": "n114",
+      "shelfIndex": 4,
+      "skuId": "d5",
+      "skuCode": "DR-401",
+      "skuName": "Energy drink 0.45 L can",
+      "x": 42,
+      "facings": 6,
+      "packWidth": 6.6,
+      "packHeight": 16.8,
+      "facingPitch": 6.6,
+      "occupiedWidth": 39.6,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n157",
+      "fixtureId": "n110",
+      "shelfId": "n115",
+      "shelfIndex": 5,
+      "skuId": "s2",
+      "skuCode": "SN-201",
+      "skuName": "Salted crackers 150 g",
+      "x": 0,
+      "facings": 3,
+      "packWidth": 18,
+      "packHeight": 12,
+      "facingPitch": 18,
+      "occupiedWidth": 54,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n158",
+      "fixtureId": "n116",
+      "shelfId": "n117",
+      "shelfIndex": 1,
+      "skuId": "d3",
+      "skuCode": "DR-201",
+      "skuName": "Still water 1.5 L PET",
+      "x": 0,
+      "facings": 7,
+      "packWidth": 8.8,
+      "packHeight": 31,
+      "facingPitch": 8.8,
+      "occupiedWidth": 61.6,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n159",
+      "fixtureId": "n116",
+      "shelfId": "n118",
+      "shelfIndex": 2,
+      "skuId": "d1",
+      "skuCode": "DR-101",
+      "skuName": "Cola 0.5 L PET",
+      "x": 0,
+      "facings": 5,
+      "packWidth": 6.5,
+      "packHeight": 22,
+      "facingPitch": 6.5,
+      "occupiedWidth": 32.5,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n160",
+      "fixtureId": "n116",
+      "shelfId": "n118",
+      "shelfIndex": 2,
+      "skuId": "d2",
+      "skuCode": "DR-102",
+      "skuName": "Lemon soda 0.5 L PET",
+      "x": 32.5,
+      "facings": 5,
+      "packWidth": 6.5,
+      "packHeight": 22,
+      "facingPitch": 6.5,
+      "occupiedWidth": 32.5,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n161",
+      "fixtureId": "n116",
+      "shelfId": "n119",
+      "shelfIndex": 3,
+      "skuId": "d5",
+      "skuCode": "DR-401",
+      "skuName": "Energy drink 0.45 L can",
+      "x": 0,
+      "facings": 10,
+      "packWidth": 6.6,
+      "packHeight": 16.8,
+      "facingPitch": 6.6,
+      "occupiedWidth": 66,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n162",
+      "fixtureId": "n116",
+      "shelfId": "n120",
+      "shelfIndex": 4,
+      "skuId": "d4",
+      "skuCode": "DR-301",
+      "skuName": "Orange juice 1 L carton",
+      "x": 0,
+      "facings": 9,
+      "packWidth": 7,
+      "packHeight": 20,
+      "facingPitch": 7,
+      "occupiedWidth": 63,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n163",
+      "fixtureId": "n121",
+      "shelfId": "n122",
+      "shelfIndex": 1,
+      "skuId": "c2",
+      "skuCode": "CF-201",
+      "skuName": "Mint gum 10 pcs",
+      "x": 0,
+      "facings": 6,
+      "packWidth": 7,
+      "packHeight": 9,
+      "facingPitch": 7,
+      "occupiedWidth": 42,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n164",
+      "fixtureId": "n121",
+      "shelfId": "n123",
+      "shelfIndex": 2,
+      "skuId": "c1",
+      "skuCode": "CF-101",
+      "skuName": "Milk chocolate 50 g",
+      "x": 0,
+      "facings": 5,
+      "packWidth": 8,
+      "packHeight": 15,
+      "facingPitch": 8,
+      "occupiedWidth": 40,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n165",
+      "fixtureId": "n121",
+      "shelfId": "n124",
+      "shelfIndex": 3,
+      "skuId": "c2",
+      "skuCode": "CF-201",
+      "skuName": "Mint gum 10 pcs",
+      "x": 0,
+      "facings": 3,
+      "packWidth": 7,
+      "packHeight": 9,
+      "facingPitch": 7,
+      "occupiedWidth": 21,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n166",
+      "fixtureId": "n121",
+      "shelfId": "n124",
+      "shelfIndex": 3,
+      "skuId": "c3",
+      "skuCode": "CF-301",
+      "skuName": "Fruit candy 100 g",
+      "x": 21,
+      "facings": 2,
+      "packWidth": 12,
+      "packHeight": 17,
+      "facingPitch": 12,
+      "occupiedWidth": 24,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n167",
+      "fixtureId": "n121",
+      "shelfId": "n125",
+      "shelfIndex": 4,
+      "skuId": "d5",
+      "skuCode": "DR-401",
+      "skuName": "Energy drink 0.45 L can",
+      "x": 0,
+      "facings": 6,
+      "packWidth": 6.6,
+      "packHeight": 16.8,
+      "facingPitch": 6.6,
+      "occupiedWidth": 39.6,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n168",
+      "fixtureId": "n121",
+      "shelfId": "n126",
+      "shelfIndex": 5,
+      "skuId": "d3",
+      "skuCode": "DR-201",
+      "skuName": "Still water 1.5 L PET",
+      "x": 0,
+      "facings": 2,
+      "packWidth": 8.8,
+      "packHeight": 31,
+      "facingPitch": 8.8,
+      "occupiedWidth": 17.6,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n169",
+      "fixtureId": "n127",
+      "shelfId": "n128",
+      "shelfIndex": 1,
+      "skuId": "c2",
+      "skuCode": "CF-201",
+      "skuName": "Mint gum 10 pcs",
+      "x": 0,
+      "facings": 7,
+      "packWidth": 7,
+      "packHeight": 9,
+      "facingPitch": 7,
+      "occupiedWidth": 49,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n170",
+      "fixtureId": "n127",
+      "shelfId": "n129",
+      "shelfIndex": 2,
+      "skuId": "s1",
+      "skuCode": "SN-101",
+      "skuName": "Potato chips 90 g",
+      "x": 0,
+      "facings": 3,
+      "packWidth": 15,
+      "packHeight": 22,
+      "facingPitch": 15,
+      "occupiedWidth": 45,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n171",
+      "fixtureId": "n127",
+      "shelfId": "n130",
+      "shelfIndex": 3,
+      "skuId": "c1",
+      "skuCode": "CF-101",
+      "skuName": "Milk chocolate 50 g",
+      "x": 0,
+      "facings": 6,
+      "packWidth": 8,
+      "packHeight": 15,
+      "facingPitch": 8,
+      "occupiedWidth": 48,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "n172",
+      "fixtureId": "n127",
+      "shelfId": "n131",
+      "shelfIndex": 4,
+      "skuId": "c3",
+      "skuCode": "CF-301",
+      "skuName": "Fruit candy 100 g",
+      "x": 0,
+      "facings": 4,
+      "packWidth": 12,
+      "packHeight": 17,
+      "facingPitch": 12,
+      "occupiedWidth": 48,
+      "photoFraming": {
+        "fit": "contain",
+        "zoom": 1,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    }
+  ],
+  "summary": {
+    "fixtures": 5,
+    "placements": 41,
+    "facings": 273
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "planogram.schema.json",
+  "title": "Planogram export v1",
+  "description": "File produced by Planogram Studio's Export JSON button. All lengths in centimetres.",
+  "type": "object",
+  "required": ["format", "version", "units", "name", "fixtures", "skus", "placements"],
+  "properties": {
+    "format": { "const": "planogram" },
+    "version": { "const": 1 },
+    "units": { "const": "cm" },
+    "exportedAt": { "type": "string", "format": "date-time" },
+    "name": { "type": "string", "description": "Planogram name, e.g. store + zone" },
+    "fixtures": { "type": "array", "items": { "$ref": "#/$defs/fixture" } },
+    "skus": { "type": "array", "items": { "$ref": "#/$defs/sku" } },
+    "placements": { "type": "array", "items": { "$ref": "#/$defs/placement" } },
+    "summary": {
+      "type": "object",
+      "description": "Derived totals, informational only",
+      "properties": {
+        "fixtures": { "type": "integer" },
+        "placements": { "type": "integer" },
+        "facings": { "type": "integer" }
+      }
+    }
+  },
+  "$defs": {
+    "fixture": {
+      "type": "object",
+      "required": ["id", "type", "name", "x", "width", "height", "base", "header", "boardThickness", "laneWidth", "hanging", "shelves"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "enum": ["gantry", "cabinet", "gondola", "cooler", "impulse", "pegboard"], "description": "gantry = tobacco gantry, cabinet = tobacco cabinet, gondola = gondola shelf, cooler = beverage cooler, impulse = checkout rack, pegboard = hook rails" },
+        "typeLabel": { "type": "string" },
+        "name": { "type": "string" },
+        "x": { "type": "number", "minimum": 0, "description": "Left edge position along the wall" },
+        "width": { "type": "number", "minimum": 20 },
+        "height": { "type": "number", "minimum": 30 },
+        "depth": { "type": "number" },
+        "base": { "type": "number", "description": "Kick plate / plinth height" },
+        "header": { "type": "number", "description": "Top header / lightbox height; 0 = none" },
+        "boardThickness": { "type": "number" },
+        "laneWidth": { "type": "number", "minimum": 0, "description": "Pusher lane width. 0 = free placement. >0 = every facing occupies a whole number of lanes" },
+        "hanging": { "type": "boolean", "description": "true = shelves are hook rails and products hang below them" },
+        "doorsClosed": { "type": "boolean", "description": "Tobacco cabinet only: display doors drawn closed" },
+        "shelves": {
+          "type": "array",
+          "description": "Sorted bottom to top",
+          "items": {
+            "type": "object",
+            "required": ["id", "y"],
+            "properties": {
+              "id": { "type": "string" },
+              "index": { "type": "integer", "description": "1 = lowest" },
+              "kind": { "enum": ["shelf", "rail"] },
+              "y": { "type": "number", "description": "Height of the board bottom (or rail) from the floor" },
+              "clearance": { "type": ["number", "null"], "description": "Free height above the board up to the next shelf or header. null for rails" }
+            }
+          }
+        }
+      }
+    },
+    "sku": {
+      "type": "object",
+      "required": ["id", "code", "name", "category", "width", "height"],
+      "properties": {
+        "id": { "type": "string" },
+        "code": { "type": "string", "description": "Match key for the Salesbox SKU catalogue" },
+        "name": { "type": "string" },
+        "shortName": { "type": "string" },
+        "category": { "enum": ["tobacco", "drinks", "snacks", "sweets"] },
+        "width": { "type": "number", "description": "Default pack front width" },
+        "height": { "type": "number", "description": "Default pack front height" },
+        "color": { "type": "string", "description": "Placeholder pack colour (hex)" },
+        "textColor": { "type": "string" },
+        "photo": { "type": ["string", "null"], "description": "data:image/... URL of the uploaded front photo, or null" }
+      }
+    },
+    "placement": {
+      "type": "object",
+      "required": ["id", "fixtureId", "shelfId", "skuId", "x", "facings", "packWidth", "packHeight"],
+      "properties": {
+        "id": { "type": "string" },
+        "fixtureId": { "type": "string" },
+        "shelfId": { "type": "string" },
+        "shelfIndex": { "type": "integer" },
+        "skuId": { "type": "string" },
+        "skuCode": { "type": ["string", "null"] },
+        "skuName": { "type": ["string", "null"] },
+        "x": { "type": "number", "description": "Left edge measured from the fixture's left edge" },
+        "facings": { "type": "integer", "minimum": 1 },
+        "packWidth": { "type": "number", "description": "Per-placement override of the SKU width" },
+        "packHeight": { "type": "number" },
+        "facingPitch": { "type": "number", "description": "Derived: horizontal space per facing (rounded up to whole lanes)" },
+        "occupiedWidth": { "type": "number", "description": "Derived: facingPitch × facings" },
+        "photoFraming": {
+          "type": "object",
+          "properties": {
+            "fit": { "enum": ["contain", "cover", "fill"] },
+            "zoom": { "type": "number", "description": "1 = 100%" },
+            "offsetX": { "type": "number", "description": "% of pack width, -50..50" },
+            "offsetY": { "type": "number", "description": "% of pack height, -50..50" }
+          }
+        }
+      }
+    }
+  }
+}
