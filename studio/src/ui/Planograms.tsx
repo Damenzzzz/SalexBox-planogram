@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
+import { analyzePhoto } from '../domain/api';
 import { analyse } from '../domain/checks';
+import { draftFromPhoto, type PhotoResultIn } from '../domain/draft';
 import { runStats } from '../domain/compare';
 import { download, importText, toBundle } from '../domain/io';
 import { capacity, sortedShelves } from '../domain/geometry';
@@ -16,9 +18,11 @@ export function Planograms() {
   const fixtures = useStore(s => s.fixtures);
   const runs = useStore(s => s.runs);
   const custom = useStore(s => s.custom);
+  const sync = useStore(s => s.settings.sync);
   const { list, byId, get } = useCatalog();
   const { savePlanogram, deletePlanogram, duplicatePlanogram, applyImport, notify } = useStore.getState();
   const [creating, setCreating] = useState(false);
+  const [drafting, setDrafting] = useState(false);
   const [confirm, setConfirm] = useState<string | null>(null);
   const file = useRef<HTMLInputElement>(null);
 
@@ -41,6 +45,7 @@ export function Planograms() {
         </div>
         <div className="actions">
           <button className="btn" onClick={() => file.current?.click()}><Icon name="upload" />Импорт</button>
+          <button className="btn" onClick={() => setDrafting(true)}><Icon name="camera" />Черновик по фото</button>
           <button className="btn" onClick={() => download(`planogram-studio-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(toBundle(planograms, fixtures, custom), null, 2))}><Icon name="download" />Выгрузить всё</button>
           <button className="btn btn-primary" onClick={() => setCreating(true)}><Icon name="plus" />Новая планограмма</button>
           <input ref={file} type="file" accept=".json,.yaml,.yml" hidden onChange={e => { const f = e.target.files?.[0]; if (f) onImport(f); e.target.value = ''; }} />
@@ -65,7 +70,7 @@ export function Planograms() {
               <div className="lib-body">
                 <div className="lib-title"><h3 title={p.name}>{p.name}</h3><span className="code">{p.fixture.code}</span></div>
                 <div className="meta">
-                  <span className={STATUS_CHIP[p.status]}>{STATUS_NAME[p.status]}</span>
+                  <span className={STATUS_CHIP[p.status]} title={p.publishedAs ?? undefined}>{STATUS_NAME[p.status]}</span>
                   <span>версия <b>{p.version}</b></span>
                   <span><b>{a.total}</b> фейс.</span>
                   <span><b>{sortedShelves(p.fixture).length}</b> полок</span>
@@ -89,10 +94,11 @@ export function Planograms() {
         })}
       </div>
 
+      {drafting && <DraftModal onClose={() => setDrafting(false)} onCreate={p => { savePlanogram(p); setDrafting(false); go(`planogram/${p.id}`); }} />}
       {creating && (
         <NewPlanogram onClose={() => setCreating(false)} onCreate={p => { savePlanogram(p); setCreating(false); go(`planogram/${p.id}`); }} />
       )}
-      <p className="hint">Каталог: {list.length} SKU из галереи recognition_ref. Всё хранится в этом браузере; для обмена — «Выгрузить всё» и «Импорт».</p>
+      <p className="hint">Каталог: {list.length} SKU из галереи recognition_ref. {sync ? 'Данные хранятся в IR-сервисе и в этом браузере.' : 'Всё хранится в этом браузере; включите «Хранить на сервере» в шапке или обменивайтесь через «Выгрузить всё» и «Импорт».'}</p>
     </div>
   );
 }
@@ -141,6 +147,51 @@ function NewPlanogram({ onClose, onCreate }: { onClose: () => void; onCreate: (p
         </div>
       </div>
       <p className="hint">Планограмма получает свою копию шкафа. Если потом поменять шаблон в конструкторе, планограмма предложит обновиться.</p>
+    </Modal>
+  );
+}
+
+// Черновик по фото точки или картинке планограммы: IR находит ряды и пачки, Studio ставит их на выбранный шкаф
+function DraftModal({ onClose, onCreate }: { onClose: () => void; onCreate: (p: Planogram) => void }) {
+  const fixtures = useStore(s => s.fixtures);
+  const { byId } = useCatalog();
+  const settings = useStore(s => s.settings);
+  const { notify } = useStore.getState();
+  const [tpl, setTpl] = useState(fixtures[0]?.id ?? '');
+  const [name, setName] = useState('Черновик по фото');
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const fx = fixtures.find(f => f.id === tpl);
+  const make = (result: PhotoResultIn) => {
+    if (!fx) return;
+    const { planogram, notes } = draftFromPhoto(result, fx, name.trim() || 'Черновик по фото', id => byId.has(id));
+    notify(notes.join('. '));
+    onCreate(planogram);
+  };
+  const onFile = async (f: File) => {
+    setError(null);
+    try {
+      if (f.name.endsWith('.json')) { const doc = JSON.parse(await f.text()); make((doc.result ?? doc) as PhotoResultIn); return; }
+      setBusy('Отправляю фото в IR…');
+      const { result } = await analyzePhoto(settings, f, {}, setBusy);
+      make({ ...(result as PhotoResultIn), photo: f.name });
+    } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
+  };
+  return (
+    <Modal title="Черновик планограммы по фото" onClose={onClose} footer={<>
+      <button className="btn" onClick={onClose}>Отмена</button>
+      <button className="btn btn-primary" disabled={!fx || !!busy} onClick={() => input.current?.click()}><Icon name="camera" size={15} />Выбрать фото или JSON</button>
+    </>}>
+      <p className="hint">Фото выкладки в точке или картинка планограммы от клиента. IR найдёт ряды главного стеллажа и узнает пачки, Studio поставит их на выбранный шкаф: полок столько же, сколько рядов на фото. Неузнанные пачки остаются пустыми местами. Можно загрузить и JSON результата IR.</p>
+      <label className="field"><span>Название</span><input className="input" value={name} onChange={e => setName(e.target.value)} /></label>
+      <div className="field"><span>Шкаф</span>
+        <select className="select" value={tpl} onChange={e => setTpl(e.target.value)}>
+          {fixtures.map(f => <option key={f.id} value={f.id}>{f.code} · {f.name}</option>)}
+        </select></div>
+      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp,.json" hidden onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ''; }} />
+      {busy && <p className="hint" role="status">{busy}</p>}
+      {error && <p className="chip chip-err" style={{ whiteSpace: 'normal', lineHeight: 1.4, padding: '6px 9px' }}>{error}</p>}
     </Modal>
   );
 }

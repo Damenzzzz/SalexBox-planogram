@@ -1,4 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type KeyboardEvent as RKeyboardEvent, type PointerEvent as RPointerEvent, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import type { Fixture } from '../domain/types';
 import { drawScene, sceneSize, type HitRect, type SceneOpts } from '../render/scene';
 import { useStore } from '../store';
@@ -28,6 +29,16 @@ const PATHS: Record<string, string> = {
   spread: 'M4 4h16M4 20h16M8 9h8M8 15h8',
   camera: 'M4 8h4l2-3h4l2 3h4v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
   file: 'M7 3h7l5 5v13H7zM14 3v5h5',
+  cloud: 'M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.1 4.5 4.5 0 0 0 7 18z',
+  refresh: 'M20 11a8 8 0 0 0-14.7-4M4 5v4h4M4 13a8 8 0 0 0 14.7 4M20 19v-4h-4',
+  history: 'M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4M12 8v4l3 2',
+  print: 'M7 9V4h10v5M7 17H5v-6h14v6h-2M8 14h8v6H8z',
+  pin: 'M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+  wand: 'M5 19 15 9m2-5v3m-1.5-1.5h3M19 11v2m-1-1h2M8 4v2M7 5h2',
+  send: 'M4 12 20 4l-6 16-3-7-7-1z',
+  layers: 'm12 4 8 4-8 4-8-4 8-4zM4 12l8 4 8-4M4 16l8 4 8-4',
+  more: 'M6 12h.01M12 12h.01M18 12h.01',
+  image: 'M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5M15.5 9.5h.01',
 };
 export function Icon({ name, size = 18 }: { name: keyof typeof PATHS | string; size?: number }) {
   return (
@@ -105,13 +116,47 @@ export function Modal({ title, children, onClose, footer }: { title: string; chi
     window.addEventListener('keydown', onKey);
     return () => { window.removeEventListener('keydown', onKey); prev?.focus(); };
   }, [onClose]);
-  return (
+  // в body: окно не наследует стили места, откуда его открыли (шапка редактора и т. п.)
+  return createPortal(
     <div className="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" role="dialog" aria-modal="true" aria-label={title} ref={ref}>
         <h2>{title}</h2>
         {children}
         {footer && <div className="foot">{footer}</div>}
       </div>
+    </div>,
+    document.body,
+  );
+}
+
+// Выпадающее меню у кнопки: Esc и клик мимо закрывают
+export function Menu({ label, icon, items, primary = false }: {
+  label: string; icon?: string; primary?: boolean;
+  items: ({ label: string; icon?: string; onClick: () => void; disabled?: boolean; hint?: string } | null)[];
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const off = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('mousedown', off); window.addEventListener('keydown', key);
+    return () => { window.removeEventListener('mousedown', off); window.removeEventListener('keydown', key); };
+  }, [open]);
+  return (
+    <div className="menu" ref={ref}>
+      <button className={`btn${primary ? ' btn-primary' : ''}`} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(v => !v)}>
+        {icon && <Icon name={icon} />}{label}<span className="caret" aria-hidden="true">▾</span>
+      </button>
+      {open && (
+        <div className="menu-pop" role="menu">
+          {items.map((it, i) => it ? (
+            <button key={i} role="menuitem" disabled={it.disabled} onClick={() => { setOpen(false); it.onClick(); }}>
+              {it.icon && <Icon name={it.icon} size={16} />}<span>{it.label}{it.hint && <small>{it.hint}</small>}</span>
+            </button>
+          ) : <hr key={i} />)}
+        </div>
+      )}
     </div>
   );
 }
@@ -173,6 +218,7 @@ export const Stage = forwardRef<StageHandle, {
   const [theme, setTheme] = useState(0);
   const fx: Fixture = scene.fx;
   const size = sceneSize(fx);
+  useStore(s => s.texRev);   // догрузились фото эталонов — перерисовать
 
   useLayoutEffect(() => {
     const el = box.current; if (!el) return;
@@ -227,6 +273,7 @@ export const Stage = forwardRef<StageHandle, {
 export function SceneThumb({ scene, width, height }: { scene: StageScene; width: number; height: number }) {
   const cv = useRef<HTMLCanvasElement>(null);
   const [theme, setTheme] = useState(0);
+  useStore(s => s.texRev);
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const on = () => setTheme(t => t + 1);

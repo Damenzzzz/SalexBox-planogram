@@ -1,0 +1,262 @@
+import { useMemo, useState } from 'react';
+import { api, jsonBody } from '../domain/api';
+import { analyse } from '../domain/checks';
+import { capacity } from '../domain/geometry';
+import { irName, toIrYaml } from '../domain/irExport';
+import { autoLayout, fitToFixture } from '../domain/layout';
+import type { Planogram, Sku, Snapshot } from '../domain/types';
+import { ACTION_RU, diffPlanograms, restoreFrom, withEntry, type Change } from '../domain/versions';
+import { go, keepSnapshot, useStore } from '../store';
+import { Icon, Modal, SceneThumb } from './common';
+import { STATUS_NAME } from './Planograms';
+
+type Get = (id: string) => Sku | undefined;
+
+const STATUS_CHIP = { draft: 'chip', review: 'chip chip-warn', approved: 'chip chip-ok', published: 'chip chip-accent' } as const;
+
+const fmt = (iso: string) => new Date(iso).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
+
+// ---------- статус и следующее действие ----------
+export function WorkflowBar({ p, get }: { p: Planogram; get: Get }) {
+  const [modal, setModal] = useState<null | 'review' | 'approve' | 'return' | 'publish'>(null);
+  const { savePlanogram, notify } = useStore.getState();
+  const act = (action: 'review' | 'approved' | 'returned', note: string) => {
+    const status = action === 'review' ? 'review' : action === 'approved' ? 'approved' : 'draft';
+    const next = withEntry(p, action, note, status);
+    savePlanogram(next);
+    if (action !== 'returned') keepSnapshot(next, `v${p.version} · ${STATUS_NAME[status].toLowerCase()}`);
+    setModal(null);
+    notify(`${ACTION_RU[action]}${note ? `: ${note}` : ''}`);
+  };
+  return (
+    <>
+      <span className={STATUS_CHIP[p.status]}>{STATUS_NAME[p.status]}</span>
+      <span className="chip">версия {p.version}</span>
+      {p.status === 'draft' && <button className="btn btn-sm" onClick={() => setModal('review')}><Icon name="send" size={15} />На согласование</button>}
+      {p.status === 'review' && <>
+        <button className="btn btn-sm btn-primary" onClick={() => setModal('approve')}><Icon name="check" size={15} />Утвердить</button>
+        <button className="btn btn-sm" onClick={() => setModal('return')}>Вернуть</button>
+      </>}
+      {p.status === 'approved' && <button className="btn btn-sm btn-primary" onClick={() => setModal('publish')}><Icon name="cloud" size={15} />Опубликовать</button>}
+      {p.status === 'published' && <button className="btn btn-sm" onClick={() => setModal('publish')} title={p.publishedAs ?? ''}><Icon name="pin" size={15} />Точки · {p.assign.outlets.length + p.assign.clusters.length ? 'назначены' : 'нет'}</button>}
+      {(modal === 'review' || modal === 'approve' || modal === 'return') && (
+        <NoteModal p={p} get={get} kind={modal} onClose={() => setModal(null)}
+          onDone={note => act(modal === 'review' ? 'review' : modal === 'approve' ? 'approved' : 'returned', note)} />
+      )}
+      {modal === 'publish' && <PublishModal p={p} get={get} onClose={() => setModal(null)} />}
+    </>
+  );
+}
+
+function NoteModal({ p, get, kind, onClose, onDone }: { p: Planogram; get: Get; kind: 'review' | 'approve' | 'return'; onClose: () => void; onDone: (note: string) => void }) {
+  const [note, setNote] = useState('');
+  const a = useMemo(() => analyse(p, get), [p, get]);
+  const errors = a.issues.filter(i => i.sev === 'error').length, contract = a.issues.filter(i => i.sev === 'contract').length;
+  const title = { review: 'Отправить на согласование', approve: 'Утвердить планограмму', return: 'Вернуть на доработку' }[kind];
+  const need = kind === 'return' && !note.trim();
+  return (
+    <Modal title={title} onClose={onClose} footer={<>
+      <button className="btn" onClick={onClose}>Отмена</button>
+      <button className="btn btn-primary" disabled={need} onClick={() => onDone(note.trim())}>{kind === 'return' ? 'Вернуть' : kind === 'approve' ? 'Утвердить' : 'Отправить'}</button>
+    </>}>
+      <p>{p.name} · версия {p.version} · {p.fixture.code}</p>
+      {kind !== 'return' && (errors || contract) ? (
+        <p className="chip chip-warn" style={{ whiteSpace: 'normal', lineHeight: 1.4, padding: '6px 9px' }}>
+          В планограмме {errors ? `${errors} ошибок` : ''}{errors && contract ? ' и ' : ''}{contract ? `${contract} нарушений контракта` : ''}. Их видно в «Проверках» под холстом.
+        </p>
+      ) : kind !== 'return' ? <p className="hint">Проверки пройдены.</p> : null}
+      <label className="field"><span>{kind === 'return' ? 'Что исправить (обязательно)' : 'Комментарий'}</span>
+        <textarea className="input" rows={3} value={note} onChange={e => setNote(e.target.value)} placeholder={kind === 'return' ? 'Например: Marlboro Red на уровень глаз, доля JTI ниже контракта' : 'необязательно'} /></label>
+      <p className="hint">{kind === 'approve' ? 'После утверждения правка раскладки начнёт новую версию: эта сохранится в истории без изменений.' : 'Запись попадёт в историю версий.'}</p>
+    </Modal>
+  );
+}
+
+const parseOutlets = (s: string) => [...new Set(s.split(/[\s,;]+/).map(x => x.trim()).filter(Boolean))];
+
+function PublishModal({ p, get, onClose }: { p: Planogram; get: Get; onClose: () => void }) {
+  const settings = useStore(s => s.settings);
+  const clusters = useStore(s => s.clusters);
+  const { savePlanogram, notify } = useStore.getState();
+  const [chosen, setChosen] = useState<string[]>(p.assign.clusters);
+  const [extra, setExtra] = useState((p.assign.outlets.length ? p.assign.outlets : p.outlet ? [p.outlet] : []).join(', '));
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const name = p.publishedAs ?? irName(p);
+  const outlets = useMemo(() => {
+    const set = new Set(parseOutlets(extra));
+    clusters.filter(c => chosen.includes(c.id)).forEach(c => c.outlets.forEach(o => set.add(o)));
+    return [...set].sort();
+  }, [extra, chosen, clusters]);
+
+  const publish = async () => {
+    setError(null);
+    try {
+      setBusy('Публикую версию…');
+      await api(settings, `/v1/planograms/${encodeURIComponent(name)}`, {
+        method: 'PUT', body: jsonBody({ yaml: toIrYaml(p, get), planogram_id: p.id, version: p.version, title: p.name }),
+      });
+      setBusy('Назначаю точки…');
+      if (outlets.length) await api(settings, '/v1/assignments', { method: 'PUT', body: jsonBody({ planogram: name, outlets }) });
+      // точки, которые убрали из списка, больше не сверяются с этой версией
+      const had = await api<{ items: { outlet_id: string }[] }>(settings, `/v1/assignments?planogram=${encodeURIComponent(name)}`);
+      const drop = had.items.map(a => a.outlet_id).filter(o => !outlets.includes(o));
+      for (const o of drop) await api(settings, `/v1/assignments/${encodeURIComponent(o)}`, { method: 'DELETE' });
+      const first = p.status !== 'published';
+      const next = withEntry({ ...p, status: 'published', publishedAs: name, assign: { clusters: chosen, outlets: parseOutlets(extra) } },
+        'published', `${name}: ${outlets.length} точек${drop.length ? `, снято с ${drop.length}` : ''}`);
+      savePlanogram(next);
+      if (first) keepSnapshot(next, `v${p.version} · опубликована`);
+      notify(`Опубликовано: ${name}, точек ${outlets.length}. Фото этих точек IR сверит с этой версией`);
+      onClose();
+    } catch (e) {
+      const msg = (e as Error).message;
+      setError(msg.includes('409') ? 'Версия с этим именем уже опубликована с другим содержимым. Начните новую версию (любая правка раскладки) или переименуйте планограмму' : msg);
+    } finally { setBusy(null); }
+  };
+
+  return (
+    <Modal title={p.status === 'published' ? 'Точки опубликованной версии' : 'Опубликовать в IR'} onClose={onClose} footer={<>
+      <button className="btn" onClick={onClose}>Отмена</button>
+      <button className="btn btn-primary" disabled={!!busy} onClick={publish}><Icon name="cloud" size={15} />{p.status === 'published' ? 'Сохранить точки' : 'Опубликовать'}</button>
+    </>}>
+      <p>Версия <b>{p.version}</b> уйдёт в IR под именем <code>{name}</code>. Опубликованную версию нельзя изменить: правка начнёт следующую.</p>
+      <div className="field"><span>Кластеры точек</span>
+        {clusters.length ? (
+          <div className="check-list">
+            {clusters.map(c => (
+              <label key={c.id} className="check"><input type="checkbox" checked={chosen.includes(c.id)} onChange={e => setChosen(v => (e.target.checked ? [...v, c.id] : v.filter(x => x !== c.id)))} />
+                {c.name} <span className="hint">· {c.outlets.length} точек</span></label>
+            ))}
+          </div>
+        ) : <p className="hint">Кластеров пока нет. Их заводят в разделе <a href="#/outlets" onClick={onClose}>«Точки»</a>.</p>}
+      </div>
+      <label className="field"><span>Отдельные точки (outlet_id через запятую или с новой строки)</span>
+        <textarea className="input mono" rows={3} value={extra} onChange={e => setExtra(e.target.value)} placeholder="out_014, out_015" /></label>
+      <p className="hint">Всего точек: <b>{outlets.length}</b>. Фото с этих outlet_id IR сверит с этой версией без поля planogram. Точки, которые уберёте из списка, перестанут с ней сверяться.</p>
+      {busy && <p className="hint" role="status">{busy}</p>}
+      {error && <p className="chip chip-err" style={{ whiteSpace: 'normal', lineHeight: 1.4, padding: '6px 9px' }}>{error}</p>}
+    </Modal>
+  );
+}
+
+// ---------- история и версии ----------
+export function VersionsPanel({ p, get, onRestore }: { p: Planogram; get: Get; onRestore: (next: Planogram) => void }) {
+  const all = useStore(s => s.snapshots);
+  const snaps = useMemo(() => all.filter(v => v.planogramId === p.id).sort((a, b) => b.version - a.version), [all, p.id]);
+  const [diff, setDiff] = useState<Snapshot | null>(null);
+  return (
+    <>
+      <section className="section">
+        <h3>Сохранённые версии · {snaps.length}</h3>
+        {!snaps.length && <p className="hint">Версия сохраняется при отправке на согласование, утверждении, публикации и при правке после них.</p>}
+        {snaps.map(v => (
+          <div key={v.id} className="ver-row">
+            <div><b>v{v.version}</b> <span className={STATUS_CHIP[v.status]}>{STATUS_NAME[v.status]}</span>
+              <span className="hint" style={{ display: 'block' }}>{fmt(v.savedAt)}</span></div>
+            <div className="row-actions">
+              <button className="btn btn-sm" onClick={() => setDiff(v)}>Сравнить</button>
+              <button className="btn btn-sm btn-ghost" onClick={() => onRestore(restoreFrom(p, v))} title="Новая версия-черновик с этой раскладкой">Восстановить</button>
+            </div>
+          </div>
+        ))}
+      </section>
+      <section className="section">
+        <h3>История</h3>
+        <ol className="journal">
+          {[...p.journal].reverse().map((j, i) => (
+            <li key={i}><b>{ACTION_RU[j.action]}</b> · v{j.version}<span className="hint"> · {fmt(j.at)}</span>{j.note && <p>{j.note}</p>}</li>
+          ))}
+        </ol>
+      </section>
+      {diff && <DiffModal a={diff.data} b={p} titleA={`v${diff.version} · ${STATUS_NAME[diff.status]}`} titleB={`сейчас · v${p.version}`} get={get} onClose={() => setDiff(null)} />}
+    </>
+  );
+}
+
+const KIND_RU: Record<Change['kind'], string> = { added: 'добавлен', removed: 'убран', facings: 'фейсинги', moved: 'полка', order: 'порядок', fixture: 'шкаф', rules: 'правила' };
+
+export function DiffModal({ a, b, titleA, titleB, get, onClose }: { a: Planogram; b: Planogram; titleA: string; titleB: string; get: Get; onClose: () => void }) {
+  const changes = useMemo(() => diffPlanograms(a, b, get), [a, b, get]);
+  return (
+    <Modal title="Было и стало" onClose={onClose} footer={<button className="btn btn-primary" onClick={onClose}>Закрыть</button>}>
+      <div className="diff-thumbs">
+        {[[a, titleA], [b, titleB]].map(([q, t]) => (
+          <figure key={t as string}><SceneThumb width={300} height={300} scene={{ fx: (q as Planogram).fixture, rows: (q as Planogram).rows, sku: get, mode: 'texture', warn: true, dims: false }} /><figcaption>{t as string}</figcaption></figure>
+        ))}
+      </div>
+      {!changes.length ? <p className="hint">Раскладка и правила совпадают.</p> : (
+        <ul className="changes">{changes.map((c, i) => <li key={i} className={`ch-${c.kind}`}><span className="chip">{KIND_RU[c.kind]}</span>{c.text}</li>)}</ul>
+      )}
+    </Modal>
+  );
+}
+
+// ---------- подогнать под шкаф ----------
+export function FitModal({ p, get, onClose }: { p: Planogram; get: Get; onClose: () => void }) {
+  const fixtures = useStore(s => s.fixtures);
+  const { savePlanogram, notify } = useStore.getState();
+  const others = fixtures.filter(f => f.id !== p.templateId);
+  const [tpl, setTpl] = useState(others[0]?.id ?? fixtures[0]?.id ?? '');
+  const fx = fixtures.find(f => f.id === tpl);
+  const res = useMemo(() => (fx ? fitToFixture(p, fx, get) : null), [p, fx, get]);
+  return (
+    <Modal title="Подогнать под другой шкаф" onClose={onClose} footer={<>
+      <button className="btn" onClick={onClose}>Отмена</button>
+      <button className="btn btn-primary" disabled={!res} onClick={() => { if (!res) return; savePlanogram(res.planogram); notify('Создана планограмма под новый шкаф'); onClose(); go(`planogram/${res.planogram.id}`); }}>Создать планограмму</button>
+    </>}>
+      <p className="hint">Полки переносятся сверху вниз, фейсинги пересчитываются по ширине нового шкафа, обязательные SKU не опускаются ниже минимума. Исходная планограмма не меняется.</p>
+      <div className="tpl-pick">
+        {fixtures.map(f => (
+          <button key={f.id} type="button" aria-pressed={f.id === tpl} onClick={() => setTpl(f.id)}>
+            <div className="lib-thumb"><SceneThumb width={130} height={115} scene={{ fx: f, rows: null, sku: () => undefined, mode: 'texture', warn: false, dims: false, sampleFill: 'KS' }} /></div>
+            <span className="code" style={{ justifySelf: 'start' }}>{f.code}</span>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>{f.name}{f.id === p.templateId ? ' · текущий' : ''}</span>
+            <span className="hint">{f.w}×{f.h} · {f.shelves.length} полок · {capacity(f).ksLanes} рядов KS</span>
+          </button>
+        ))}
+      </div>
+      {res && (
+        <div className="fit-preview">
+          <SceneThumb width={220} height={240} scene={{ fx: res.planogram.fixture, rows: res.planogram.rows, sku: get, mode: 'texture', warn: true, dims: false }} />
+          <ul className="changes">{res.notes.map((n, i) => <li key={i}>{n}</li>)}</ul>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+// ---------- разложить по правилам ----------
+export function AutoModal({ p, get, list, onApply, onClose }: { p: Planogram; get: Get; list: Sku[]; onApply: (next: Planogram) => void; onClose: () => void }) {
+  const placed = useMemo(() => [...new Set([...Object.values(p.rows).flat().map(q => q.sku), ...p.rules.mustHave])], [p]);
+  const [skus, setSkus] = useState<string[]>(placed);
+  const [add, setAdd] = useState('');
+  const res = useMemo(() => autoLayout(p, get, { skus }), [p, get, skus]);
+  const options = useMemo(() => list.filter(s => !skus.includes(s.id)).sort((a, b) => a.name.localeCompare(b.name)), [list, skus]);
+  return (
+    <Modal title="Разложить по правилам" onClose={onClose} footer={<>
+      <button className="btn" onClick={onClose}>Отмена</button>
+      <button className="btn btn-primary" disabled={!skus.length} onClick={() => { onApply(res.planogram); onClose(); }}><Icon name="wand" size={15} />Разложить</button>
+    </>}>
+      <p className="hint">Обязательные SKU получают свой минимум, производители — долю по контракту, остальное делится поровну. Блоки идут по производителю и бренду, премиум выше, близнецы не рядом. Отменить — ⌘Z.</p>
+      <div className="fit-preview">
+        <SceneThumb width={220} height={240} scene={{ fx: p.fixture, rows: res.planogram.rows, sku: get, mode: 'texture', warn: true, dims: false }} />
+        <div style={{ display: 'grid', gap: 8, alignContent: 'start', minWidth: 0 }}>
+          <ul className="changes">{res.notes.map((n, i) => <li key={i}>{n}</li>)}</ul>
+          <div className="field"><span>SKU · {skus.length}</span>
+            <div className="sku-chips">
+              {skus.map(id => (
+                <span key={id} className={`chip ${p.rules.mustHave.includes(id) ? 'chip-accent' : ''}`}>{get(id)?.name ?? id}
+                  {!p.rules.mustHave.includes(id) && <button className="chip-x" aria-label={`Убрать ${get(id)?.name ?? id}`} onClick={() => setSkus(v => v.filter(x => x !== id))}>×</button>}</span>
+              ))}
+            </div>
+            <select className="select" value={add} aria-label="Добавить SKU" onChange={e => { const id = e.target.value; if (id) setSkus(v => [...v, id]); setAdd(''); }}>
+              <option value="">+ добавить SKU из каталога</option>
+              {options.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}

@@ -2,14 +2,17 @@ import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from 'reac
 import { analyse, type Issue } from '../domain/checks';
 import { FORMATS, FORMAT_ORDER, MAKERS, MAKER_ORDER, SEGMENTS } from '../domain/formats';
 import { clearanceOf, innerW, laneOf, packFloor, packsDeep, shelfIndex, shelvesTopDown, uid, usedWidth } from '../domain/geometry';
+import { planogramSheets } from '../domain/exports';
 import { download, toBundle } from '../domain/io';
 import { irName, toIrYaml, zonesOf } from '../domain/irExport';
-import type { AlignCosts, FormatId, Maker, Placement, Planogram, PlanogramStatus, Sku } from '../domain/types';
+import type { AlignCosts, FormatId, Maker, Placement, Planogram, Sku } from '../domain/types';
+import { needsNewVersion, nextVersion } from '../domain/versions';
+import { XLSX_TYPE, downloadBytes, xlsx } from '../domain/xlsx';
 import { thumbURL } from '../render/textures';
-import { MARGIN, type HitRect } from '../render/scene';
+import { MARGIN, drawScene, sceneSize, type HitRect } from '../render/scene';
 import { go, useCatalog, useStore } from '../store';
-import { Icon, NumField, Seg, Stage, facingsWord, pct, useHistory, type StageHandle } from './common';
-import { STATUS_NAME } from './Planograms';
+import { Icon, Menu, NumField, Seg, Stage, facingsWord, pct, useHistory, type StageHandle } from './common';
+import { AutoModal, FitModal, VersionsPanel, WorkflowBar } from './Workflow';
 
 type Mode = 'texture' | 'schema' | 'ir';
 type DragState = { id: string | null; sku: string; sx: number; sy: number; moved: boolean; target: { shelfId: string; idx: number; mm: number } | null };
@@ -33,7 +36,8 @@ function EditorView({ p }: { p: Planogram }) {
   const [selP, setSelP] = useState<string | null>(null);
   const [selS, setSelS] = useState<string>(() => shelvesTopDown(fx)[0]?.id ?? '');
   const [hover, setHover] = useState<string | null>(null);
-  const [tab, setTab] = useState<'props' | 'rules' | 'ir'>('props');
+  const [tab, setTab] = useState<'props' | 'rules' | 'ir' | 'versions'>('props');
+  const [tool, setTool] = useState<null | 'fit' | 'auto'>(null);
   const [query, setQuery] = useState('');
   const [maker, setMaker] = useState<Maker | 'ALL'>('ALL');
   const [format, setFormat] = useState<FormatId | 'ALL'>('ALL');
@@ -48,11 +52,20 @@ function EditorView({ p }: { p: Planogram }) {
   const apply = useCallback((v: Planogram) => savePlanogram(v), [savePlanogram]);
   const hist = useHistory(p.id, p, apply);
   const { commit } = hist;
+  // Правка не черновика начинает новую версию: прежняя остаётся снимком в «Версиях»
   const update = useCallback((fn: (q: Planogram) => void) => {
-    const next = structuredClone(p);
+    let base = p;
+    if (needsNewVersion(p)) {
+      const { next: bumped, snapshot } = nextVersion(p);
+      const st = useStore.getState();
+      if (!st.snapshots.some(v => v.planogramId === p.id && v.version === p.version)) st.saveSnapshot(snapshot);
+      base = bumped;
+      notify(`Начата версия ${bumped.version}: v${p.version} сохранена в «Версиях» без изменений`);
+    }
+    const next = structuredClone(base);
     fn(next);
     commit(next);
-  }, [p, commit]);
+  }, [p, commit, notify]);
 
   const a = useMemo(() => analyse(p, get), [p, get]);
 
@@ -235,19 +248,27 @@ function EditorView({ p }: { p: Planogram }) {
           <a className="btn btn-ghost icon-btn" href="#/planograms" aria-label="К списку планограмм"><Icon name="back" /></a>
           <span className="code">{fx.code}</span>
           <input aria-label="Название планограммы" value={p.name} onChange={e => savePlanogram({ ...p, name: e.target.value })} />
-          <select className="select" style={{ width: 'auto' }} aria-label="Статус" value={p.status} onChange={e => update(q => { q.status = e.target.value as PlanogramStatus; })}>
-            {Object.entries(STATUS_NAME).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
-          <span className="chip">версия {p.version}</span>
+          <WorkflowBar p={p} get={get} />
         </div>
         <button className="btn icon-btn" onClick={hist.undo} disabled={!hist.canUndo} aria-label="Отменить" title="Отменить (⌘Z)"><Icon name="undo" /></button>
         <button className="btn icon-btn" onClick={hist.redo} disabled={!hist.canRedo} aria-label="Повторить" title="Повторить (⇧⌘Z)"><Icon name="redo" /></button>
         <span className="sep" />
-        <button className="btn" onClick={() => download(`${irName(p)}.yaml`, toIrYaml(p, get), 'text/yaml')}><Icon name="download" />YAML для IR</button>
-        <button className="btn" onClick={() => {
-          const used = [...new Set(Object.values(p.rows).flat().map(q => q.sku))].map(get).filter((s): s is Sku => !!s);
-          download(`${irName(p)}.json`, JSON.stringify(toBundle([p], [], used), null, 2));
-        }}><Icon name="download" />JSON</button>
+        <Menu label="Авто" icon="wand" items={[
+          { label: 'Разложить по правилам', icon: 'wand', hint: 'доли, must-have, блоки брендов', onClick: () => setTool('auto') },
+          { label: 'Подогнать под другой шкаф', icon: 'cabinet', hint: 'новая планограмма на другом размере', onClick: () => setTool('fit') },
+        ]} />
+        <Menu label="Выгрузить" icon="download" items={[
+          { label: 'YAML для IR', icon: 'file', hint: 'configs/planograms', onClick: () => download(`${irName(p)}.yaml`, toIrYaml(p, get), 'text/yaml') },
+          { label: 'Excel', icon: 'grid', hint: 'раскладка, сводка, правила, проверки', onClick: () => downloadBytes(`${irName(p)}.xlsx`, xlsx(planogramSheets(p, get)), XLSX_TYPE) },
+          { label: 'Картинка PNG', icon: 'image', onClick: () => exportPng(p, get, settings.warn) },
+          { label: 'Печать и PDF', icon: 'print', hint: 'схема для мерчендайзера', onClick: () => window.open(`#/print/${p.id}`, '_blank') },
+          { label: 'Прайс-лист', icon: 'print', hint: 'закрытая выкладка, только текст', onClick: () => window.open(`#/pricelist/${p.id}`, '_blank') },
+          null,
+          { label: 'JSON Studio', icon: 'download', onClick: () => {
+            const used = [...new Set(Object.values(p.rows).flat().map(q => q.sku))].map(get).filter((s): s is Sku => !!s);
+            download(`${irName(p)}.json`, JSON.stringify(toBundle([p], [], used), null, 2));
+          } },
+        ]} />
         <button className="btn btn-primary" onClick={() => go(`compare/${p.id}`)}><Icon name="scan" />Сверка</button>
       </div>
 
@@ -348,7 +369,7 @@ function EditorView({ p }: { p: Planogram }) {
         {/* инспектор */}
         <aside className="pane pane-r">
           <div className="pane-head">
-            <Seg label="Панель" value={tab} options={[['props', 'Свойства'], ['rules', 'Правила'], ['ir', 'IR']]} onChange={setTab} />
+            <Seg label="Панель" value={tab} options={[['props', 'Свойства'], ['rules', 'Правила'], ['ir', 'IR'], ['versions', 'Версии']]} onChange={setTab} />
           </div>
           <div className="pane-scroll">
             {tab === 'props' && (selected && selSku && selShelf ? (
@@ -410,6 +431,8 @@ function EditorView({ p }: { p: Planogram }) {
 
             {tab === 'rules' && <Rules p={p} update={update} get={get} placed={a.placed} />}
 
+            {tab === 'versions' && <VersionsPanel p={p} get={get} onRestore={next => { commit(next); notify(`Версия ${next.version}: раскладка восстановлена`); }} />}
+
             {tab === 'ir' && (
               <section className="section">
                 <div className="section-head"><h3>Профиль для align.py</h3>
@@ -417,7 +440,7 @@ function EditorView({ p }: { p: Planogram }) {
                     <button className="btn btn-sm" onClick={() => { navigator.clipboard.writeText(yaml).then(() => notify('YAML скопирован'), () => notify('Не удалось скопировать: выделите текст вручную')); }}><Icon name="copy" size={15} />Копировать</button>
                     <button className="btn btn-sm" onClick={() => download(`${irName(p)}.yaml`, yaml, 'text/yaml')}><Icon name="download" size={15} />Скачать</button>
                   </div></div>
-                <p className="hint">Положите файл в <code>configs/planograms/&lt;client_id&gt;/&lt;outlet_id&gt;.yaml</code> или отправьте фото в разделе «Сверка IR»: Studio передаст профиль вместе с фото.</p>
+                <p className="hint">{p.publishedAs ? <>Опубликована в IR как <code>{p.publishedAs}</code>: фото назначенных точек сверяются с ней сами. </> : null}Можно положить файл в <code>configs/planograms/&lt;client_id&gt;/&lt;outlet_id&gt;.yaml</code> или отправить фото в «Сверке IR»: Studio передаст профиль вместе с фото.</p>
                 <pre className="code-block">{yaml}</pre>
                 <h3>Стоимости выравнивания</h3>
                 <div className="grid3">
@@ -431,6 +454,8 @@ function EditorView({ p }: { p: Planogram }) {
           </div>
         </aside>
       </div>
+      {tool === 'fit' && <FitModal p={p} get={get} onClose={() => setTool(null)} />}
+      {tool === 'auto' && <AutoModal p={p} get={get} list={list} onClose={() => setTool(null)} onApply={next => { update(q => { q.rows = next.rows; }); notify('Разложено по правилам. Отменить — ⌘Z'); }} />}
       <img ref={ghost} className="ghost" alt="" hidden />
       {tip && <div className="tip" style={{ transform: `translate(${tip.x + 14}px, ${tip.y + 14}px)` }}><b>{tip.html.name}</b><span>{tip.html.meta}</span></div>}
     </div>
@@ -470,7 +495,7 @@ function Rules({ p, update, get, placed }: { p: Planogram; update: (fn: (q: Plan
       </section>
       <section className="section">
         <h3>Близнецы для IR</h3>
-        <p className="hint">Пары, которые IR путает. Studio предупредит, если они стоят рядом, а в профиле они сверяются по бренду.</p>
+        <p className="hint">Пары, которые IR путает. Studio предупредит, если они стоят рядом, а align.py засчитает подмену внутри пары как «на месте».</p>
         {p.ir.twins.map(([x, y], i) => (
           <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 28px', gap: 6, alignItems: 'center', fontSize: 13 }}>
             <span>{get(x)?.name ?? x} ↔ {get(y)?.name ?? y}</span>
@@ -526,4 +551,21 @@ function Bottom({ p, a, onFix }: { p: Planogram; a: ReturnType<typeof analyse>; 
       </div>
     </div>
   );
+}
+
+// PNG шкафа в хорошем разрешении: ~0.9 px на мм, как печать A4
+function exportPng(p: Planogram, get: (id: string) => Sku | undefined, warn: boolean) {
+  const size = sceneSize(p.fixture);
+  const S = Math.min(1.2, 2400 / size.h);
+  const c = document.createElement('canvas');
+  c.width = Math.round(size.w * S * 2); c.height = Math.round(size.h * S * 2);
+  drawScene(c.getContext('2d')!, { fx: p.fixture, rows: p.rows, sku: get, mode: 'texture', warn, dims: true, S, DPR: 2 });
+  c.toBlob(b => {
+    if (!b) return;
+    const url = URL.createObjectURL(b);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${irName(p)}.png`;
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, 'image/png');
 }

@@ -1,11 +1,17 @@
+import { strToU8, zipSync } from 'fflate';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { mapReport, planogramFromRun, rowKey, runStats, slotKey, truthStatus } from '../domain/compare';
+import { galleryCrops, mapReport, memoryOf, rowKey, rowsFromRun, runStats, slotKey, truthStatus } from '../domain/compare';
+import { analyzePhoto } from '../domain/api';
+import { runsSheet } from '../domain/exports';
 import { shelvesTopDown, uid } from '../domain/geometry';
-import { irLabel, toIrYaml } from '../domain/irExport';
+import { irLabel, irName, toIrYaml } from '../domain/irExport';
 import type { IrPlanogramReport, IrRun, IrSlot, Planogram, SlotStatus, Sku } from '../domain/types';
+import { nextVersion } from '../domain/versions';
+import { XLSX_TYPE, downloadBytes, xlsx } from '../domain/xlsx';
 import { STATUS_TOKEN } from '../render/scene';
 import { go, useCatalog, useStore } from '../store';
 import { Icon, Stage, pct } from './common';
+import { ServerModal } from './Server';
 
 export const STATUS_RU: Record<SlotStatus, string> = {
   ok: 'на месте', misplaced: 'чужой SKU', wrong_shelf: 'не та полка', missing: 'пусто', extra: 'сверх плана', needs_review: 'на проверку',
@@ -41,16 +47,17 @@ export function Compare({ planogramId }: { planogramId: string | null }) {
 }
 
 function CompareView({ p }: { p: Planogram }) {
-  const { get } = useCatalog();
+  const { get, list } = useCatalog();
   const settings = useStore(s => s.settings);
   const allRuns = useStore(s => s.runs);
   const runs = useMemo(() => allRuns.filter(r => r.planogramId === p.id), [allRuns, p.id]);
-  const { addRun, updateRun, deleteRun, setSettings, savePlanogram, notify } = useStore.getState();
+  const { addRun, updateRun, deleteRun, savePlanogram, saveSnapshot, notify } = useStore.getState();
+  const skuOptions = useMemo(() => [...list].sort((a, b) => a.name.localeCompare(b.name)), [list]);
   const [runId, setRunId] = useState<string | null>(runs[0]?.id ?? null);
   const [selSlot, setSelSlot] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [outlet, setOutlet] = useState(p.outlet);
-  const [showKey, setShowKey] = useState(false);
+  const [server, setServer] = useState(false);
   const photoInput = useRef<HTMLInputElement>(null);
   const jsonInput = useRef<HTMLInputElement>(null);
   const run = runs.find(r => r.id === runId) ?? null;
@@ -73,31 +80,13 @@ function CompareView({ p }: { p: Planogram }) {
     const size = await imageSize(url);
     setBusy('Отправляю фото в IR…');
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('planogram', toIrYaml(p, get));
-      if (outlet.trim()) fd.append('outlet_id', outlet.trim());
-      const base = settings.apiBase.replace(/\/$/, '');
-      const headers: Record<string, string> = settings.apiKey ? { 'X-API-Key': settings.apiKey } : {};
-      let res = await fetch(`${base}/v1/photos?wait=true`, { method: 'POST', body: fd, headers });
-      if (res.status === 401 || res.status === 403) throw new Error('ключ API не подошёл. Введите ключ из SALESBOX_API_KEYS');
-      if (!res.ok) throw new Error(`сервис ответил ${res.status}: ${(await res.text()).slice(0, 200)}`);
-      let rec = await res.json();
-      const t0 = Date.now();
-      while (rec.status === 'processing') {
-        if (Date.now() - t0 > 120_000) throw new Error('IR не ответил за 2 минуты. Очередь занята, попробуйте позже');
-        setBusy(`IR считает фото… ${Math.round((Date.now() - t0) / 1000)} с`);
-        await new Promise(r => setTimeout(r, 1500));
-        res = await fetch(`${base}/v1/photos/${rec.photo_id}`, { headers });
-        rec = await res.json();
-      }
-      if (rec.status === 'failed') throw new Error(rec.error ?? 'прогон упал на сервере');
-      const result = rec.result ?? rec;
-      if (!result.planogram) throw new Error('в ответе нет сверки. Сервис должен принимать поле planogram (ветка islambek/planogram-studio в SalesBox)');
-      save(result.planogram, 'api', file.name, rec.photo_id ?? null, modelsOf(result.models), url, size);
-      notify(`Сверка готова: соответствие ${pct(result.planogram.compliance)}`);
+      const { photoId, result } = await analyzePhoto(settings, file, { planogram: toIrYaml(p, get), outlet_id: outlet.trim() }, setBusy);
+      const report = result.planogram as IrPlanogramReport | undefined;
+      if (!report) throw new Error('в ответе нет сверки. Сервис должен принимать поле planogram (ветка islambek/planogram-studio в SalesBox)');
+      save(report, 'api', file.name, photoId, modelsOf(result.models), url, size);
+      notify(`Сверка готова: соответствие ${pct(report.compliance)}`);
     } catch (e) {
-      notify(`Не получилось: ${(e as Error).message === 'Failed to fetch' ? 'IR-сервис недоступен. Запустите uv run salesbox-api на 127.0.0.1:8000' : (e as Error).message}`);
+      notify(`Не получилось: ${(e as Error).message}`);
     } finally { setBusy(null); }
   };
 
@@ -112,9 +101,13 @@ function CompareView({ p }: { p: Planogram }) {
     } catch (e) { notify(`Не прочитал «${file.name}»: ${(e as Error).message}`); }
   };
 
-  const verdict = (key: string, v: 'right' | 'wrong', truth?: SlotStatus) => {
+  const verdict = (key: string, v: 'right' | 'wrong', truth?: SlotStatus, truthSku?: string) => {
     if (!run) return;
-    updateRun(run.id, r => ({ ...r, verdicts: { ...r.verdicts, [key]: v === 'right' ? { v } : { v, truth } } }));
+    updateRun(run.id, r => {
+      const old = r.verdicts[key];
+      const next = v === 'right' ? { v } : { v, truth: truth ?? old?.truth, truthSku: truthSku === '' ? undefined : truthSku ?? old?.truthSku };
+      return { ...r, verdicts: { ...r.verdicts, [key]: next } };
+    });
   };
   const clearVerdict = (key: string) => run && updateRun(run.id, r => { const v = { ...r.verdicts }; delete v[key]; return { ...r, verdicts: v }; });
 
@@ -166,23 +159,17 @@ function CompareView({ p }: { p: Planogram }) {
             <input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={e => { const f = e.target.files?.[0]; if (f) sendPhoto(f); e.target.value = ''; }} />
             <input ref={jsonInput} type="file" accept=".json" hidden onChange={e => { const f = e.target.files?.[0]; if (f) loadJson(f); e.target.value = ''; }} />
             {busy && <p className="hint" role="status">{busy}</p>}
-            <details>
-              <summary className="hint" style={{ cursor: 'pointer' }}>Подключение к IR-сервису</summary>
-              <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
-                <label className="field"><span>Адрес сервиса (пусто — через прокси Studio на 127.0.0.1:8000)</span><input className="input mono" value={settings.apiBase} placeholder="http://127.0.0.1:8000" onChange={e => setSettings({ apiBase: e.target.value })} /></label>
-                <label className="field"><span>Ключ API (X-API-Key)</span>
-                  <div style={{ display: 'flex', gap: 6 }}><input className="input mono" type={showKey ? 'text' : 'password'} value={settings.apiKey} onChange={e => setSettings({ apiKey: e.target.value })} autoComplete="off" />
-                    <button className="btn btn-sm" type="button" onClick={() => setShowKey(v => !v)}>{showKey ? 'Скрыть' : 'Показать'}</button></div></label>
-                <label className="field"><span>Точка (outlet_id)</span><input className="input" value={outlet} onChange={e => setOutlet(e.target.value)} /></label>
-              </div>
-            </details>
+            <label className="field"><span>Точка (outlet_id)</span><input className="input" value={outlet} placeholder="необязательно" onChange={e => setOutlet(e.target.value)} /></label>
+            <button className="btn btn-sm btn-ghost" style={{ justifySelf: 'start' }} onClick={() => setServer(true)}><Icon name="cloud" size={15} />Подключение к IR-сервису{settings.apiBase ? ` · ${settings.apiBase}` : ''}</button>
+            {server && <ServerModal onClose={() => setServer(false)} />}
             <button className="btn btn-sm" onClick={() => { const r = simulate(p, get); save(r, 'file', 'пример без фото', null, 'симуляция в Studio', null, null); notify('Пример сверки создан: статусы условные'); }}>Пример сверки без сервиса</button>
           </section>
 
           {runs.length > 0 && (
             <section className="section">
-              <h3>Память сверок · {runs.length}</h3>
-              <MemorySummary runs={runs} />
+              <div className="section-head"><h3>Память сверок · {runs.length}</h3>
+                <button className="btn btn-sm" onClick={() => downloadBytes(`${irName(p)}-сверки.xlsx`, xlsx([runsSheet(p, runs, get)]), XLSX_TYPE)}><Icon name="download" size={15} />Excel</button></div>
+              <MemorySummary runs={runs} get={get} />
               <div className="runs">
                 {runs.map(r => {
                   const st = runStats(r);
@@ -211,8 +198,18 @@ function CompareView({ p }: { p: Planogram }) {
               {!matched && <p className="chip chip-warn" style={{ whiteSpace: 'normal', lineHeight: 1.4, padding: '6px 9px' }}>IR не сопоставил ни один ряд фото с полками этой планограммы. Скорее всего, на фото другой шкаф или видна только его часть: все пачки ушли в «сверх плана».</p>}
               {matched > 0 && unmatched > 0 && <p className="hint">{unmatched} ряд(а) фото без пары в планограмме: их пачки — «сверх плана».</p>}
               <p className="hint">Проверено {stats.verified} из {stats.slots} слотов. Enter — IR прав, X — ошибся, стрелки — следующий слот. {run.models && `Модели: ${run.models}.`}</p>
-              <button className="btn btn-sm" onClick={() => { const next = planogramFromRun(p, run); savePlanogram(next); notify('Создана новая версия по фото'); go(`planogram/${next.id}`); }}>
-                <Icon name="edit" size={15} />Новая версия планограммы по фото</button>
+              <div className="row-actions">
+                <button className="btn btn-sm" onClick={() => {
+                  const { next, snapshot } = nextVersion(p, `по фото ${run.photoName}`);
+                  if (!useStore.getState().snapshots.some(v => v.planogramId === p.id && v.version === p.version)) saveSnapshot(snapshot);
+                  savePlanogram({ ...next, rows: rowsFromRun(next, run) });
+                  notify(`Версия ${next.version} по фото: v${p.version} сохранена в «Версиях»`); go(`planogram/${p.id}`);
+                }}><Icon name="edit" size={15} />Новая версия по фото</button>
+                <button className="btn btn-sm" disabled={!photos.get(run.id) || !galleryCrops(run).length}
+                  title={!photos.get(run.id) ? 'Фото этой сверки не сохранено: кропы режутся из оригинала текущей сессии' : 'Подтверждённые слоты: папки «бренд/модель» для salesbox-gallery'}
+                  onClick={() => exportCrops(run, photos.get(run.id)!).then(n => notify(`Эталонов в архиве: ${n}. Передайте его в галерею (salesbox-gallery)`), e => notify(`Не вышло: ${(e as Error).message}`))}>
+                  <Icon name="image" size={15} />Эталоны в галерею · {galleryCrops(run).length}</button>
+              </div>
             </section>
           )}
 
@@ -252,11 +249,20 @@ function CompareView({ p }: { p: Planogram }) {
                 {run.verdicts[sel.key] && <button className="btn btn-sm btn-ghost" onClick={() => clearVerdict(sel.key)}>Сбросить</button>}
               </div>
               {run.verdicts[sel.key]?.v === 'wrong' && (
-                <label className="field"><span>Как на самом деле</span>
-                  <select className="select" value={truthStatus(run, sel.key, sel.s)} onChange={e => verdict(sel.key, 'wrong', e.target.value as SlotStatus)}>
-                    {STATUSES.map(s => <option key={s} value={s}>{STATUS_RU[s]}</option>)}
-                  </select></label>
+                <div className="grid2">
+                  <label className="field"><span>Как на самом деле</span>
+                    <select className="select" value={truthStatus(run, sel.key, sel.s)} onChange={e => verdict(sel.key, 'wrong', e.target.value as SlotStatus)}>
+                      {STATUSES.map(s => <option key={s} value={s}>{STATUS_RU[s]}</option>)}
+                    </select></label>
+                  <label className="field"><span>Какая пачка стоит</span>
+                    <select className="select" value={run.verdicts[sel.key]?.truthSku ?? ''} onChange={e => verdict(sel.key, 'wrong', undefined, e.target.value)}>
+                      <option value="">не указано</option>
+                      {sel.s.expected_sku && <option value={sel.s.expected_sku}>{name(get, sel.s.expected_sku)} (ожидалась)</option>}
+                      {skuOptions.filter(s => s.id !== sel.s.expected_sku).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select></label>
+                </div>
               )}
+              {run.verdicts[sel.key]?.v === 'wrong' && <p className="hint">Пачка нужна для пар-путаниц и для эталонов галереи: кроп уйдёт под правильной меткой.</p>}
             </section>
           )}
         </div>
@@ -265,29 +271,60 @@ function CompareView({ p }: { p: Planogram }) {
   );
 }
 
-function MemorySummary({ runs }: { runs: IrRun[] }) {
-  const st = runs.map(runStats).filter(s => s.verified);
-  const verified = st.reduce((a, s) => a + s.verified, 0);
-  const right = st.reduce((a, s) => a + s.right, 0);
-  const errs = st.filter(s => s.error != null).map(s => s.error!);
-  const confusions = new Map<string, number>();
-  runs.forEach(r => r.report.rows.forEach(row => row.slots.forEach(s => {
-    const v = r.verdicts[slotKey(rowKey(row), s.pos)];
-    if (v?.v === 'wrong' && s.expected_sku && s.sku && s.expected_sku !== s.sku) {
-      const k = [s.expected_sku, s.sku].sort().join(' ↔ ');
-      confusions.set(k, (confusions.get(k) ?? 0) + 1);
-    }
-  })));
-  const top = [...confusions.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
+function MemorySummary({ runs, get }: { runs: IrRun[]; get: (id: string) => Sku | undefined }) {
+  const m = useMemo(() => memoryOf(runs), [runs]);
+  const photos = runs.filter(r => runStats(r).verified).length;
+  const errs = m.byModel.filter(x => x.error != null);
+  const avgErr = errs.length ? errs.reduce((a, x) => a + x.error! * x.runs, 0) / errs.reduce((a, x) => a + x.runs, 0) : null;
+  const worst = m.bySku.filter(([, t]) => t.verified >= 2).slice(0, 6);
   return (
     <>
       <div className="cap-grid">
-        <div className="cap"><b>{verified ? pct(right / verified) : '—'}</b><span>точность по {verified} слотам</span></div>
-        <div className="cap"><b>{errs.length ? (errs.reduce((a, b) => a + b, 0) / errs.length * 100).toFixed(1) : '—'}</b><span>средняя ошибка, п.п.</span></div>
+        <div className="cap"><b>{m.verified ? pct(m.right / m.verified) : '—'}</b><span>точность по {m.verified} слотам</span></div>
+        <div className="cap"><b>{avgErr != null ? (avgErr * 100).toFixed(1) : '—'}</b><span>ошибка compliance, п.п.</span></div>
+        <div className="cap"><b>{photos}/50</b><span>проверенных фото</span></div>
       </div>
-      {top.length > 0 && <p className="hint">Путает: {top.map(([k, n]) => `${k} (${n})`).join('; ')}</p>}
+      {m.byModel.length > 0 && m.verified > 0 && (
+        <table className="mini-table">
+          <thead><tr><th>Модели</th><th>фото</th><th>точность</th><th>ошибка</th></tr></thead>
+          <tbody>{m.byModel.map(x => (
+            <tr key={x.models}><td title={x.models}>{x.models}</td><td>{x.runs}</td><td>{x.verified ? pct(x.right / x.verified) : '—'}</td><td>{x.error != null ? `${(x.error * 100).toFixed(1)}` : '—'}</td></tr>
+          ))}</tbody>
+        </table>
+      )}
+      {worst.length > 0 && (
+        <table className="mini-table">
+          <thead><tr><th>Хуже всего узнаёт</th><th>слотов</th><th>точность</th></tr></thead>
+          <tbody>{worst.map(([id, x]) => (
+            <tr key={id}><td title={id}>{name(get, id)}</td><td>{x.verified}</td><td>{pct(x.right / x.verified)}</td></tr>
+          ))}</tbody>
+        </table>
+      )}
+      {m.confusions.length > 0 && <p className="hint">Путает: {m.confusions.slice(0, 4).map(([k, n]) => `${k.split(' ↔ ').map(x => name(get, x)).join(' → ')} (${n})`).join('; ')}. Такие пары стоит добавить в «Близнецы» или дать им эталоны.</p>}
     </>
   );
+}
+
+// Кропы подтверждённых слотов из оригинала фото: ZIP с папками «бренд/модель», как ждёт salesbox-gallery
+async function exportCrops(run: IrRun, url: string): Promise<number> {
+  const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('фото не открылось')); i.src = url; });
+  const files: Record<string, Uint8Array> = {};
+  const safe = (s: string) => s.replace(/[\\:*?"<>|]/g, '_').trim();
+  const stem = safe(run.photoName.replace(/\.[^.]+$/, ''));
+  for (const c of galleryCrops(run)) {
+    const [x1, y1, x2, y2] = c.box;
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, x2 - x1); cv.height = Math.max(1, y2 - y1);
+    cv.getContext('2d')!.drawImage(img, x1, y1, x2 - x1, y2 - y1, 0, 0, cv.width, cv.height);
+    const blob = await new Promise<Blob | null>(res => cv.toBlob(res, 'image/jpeg', 0.92));
+    if (!blob) continue;
+    const [brand, ...model] = c.label.split('/');
+    files[`${safe(brand)}/${safe(model.join('/'))}/${stem}-${c.key.replace(':', 'p')}.jpg`] = new Uint8Array(await blob.arrayBuffer());
+  }
+  const n = Object.keys(files).length;
+  files['README.txt'] = strToU8(`Эталоны из сверки «${run.photoName}» (${run.createdAt}): слоты, подтверждённые человеком в Planogram Studio.\nЗалить: uv run salesbox-gallery <папка> --config configs/recognition/siglip2-base-224-shelf.yaml --qdrant recognition_ref\n`);
+  downloadBytes(`эталоны-${stem}.zip`, zipSync(files, { level: 0 }), 'application/zip');
+  return n;
 }
 
 function PhotoView({ run, url, selSlot, onSelect }: { run: IrRun | null; url: string | null; selSlot: string | null; onSelect: (k: string) => void }) {

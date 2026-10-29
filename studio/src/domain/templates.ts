@@ -47,7 +47,21 @@ export function newPlanogram(template: Fixture, name: string): Planogram {
     fixture: fx, templateId: template.id, templateVersion: template.version, rows,
     rules: { mustHave: [], minFacings: {}, shareTargets: {} },
     ir: { twins: [], skipShelves: [], costs: { ...DEFAULT_COSTS } },
+    journal: [{ at: now(), version: 1, action: 'created', note: `на шкафу ${template.code}` }],
+    assign: { clusters: [], outlets: [] }, publishedAs: null,
     createdAt: now(), updatedAt: now(),
+  };
+}
+
+// Планограммы из прошлых версий Studio, импорта и сервера: недостающие поля — по умолчанию
+export function normalizePlanogram(p: Planogram): Planogram {
+  return {
+    ...p,
+    journal: p.journal ?? [],
+    assign: { clusters: p.assign?.clusters ?? [], outlets: p.assign?.outlets ?? [] },
+    publishedAs: p.publishedAs ?? null,
+    ir: { twins: p.ir?.twins ?? [], skipShelves: p.ir?.skipShelves ?? [], costs: { ...DEFAULT_COSTS, ...(p.ir?.costs ?? {}) } },
+    rules: { mustHave: p.rules?.mustHave ?? [], minFacings: p.rules?.minFacings ?? {}, shareTargets: p.rules?.shareTargets ?? {} },
   };
 }
 
