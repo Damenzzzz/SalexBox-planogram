@@ -6,22 +6,31 @@ import { Constructor } from './ui/Constructor';
 import { Editor } from './ui/Editor';
 import { Catalog } from './ui/Catalog';
 import { Compare } from './ui/Compare';
+import { Outlets } from './ui/Outlets';
+import { PriceListView, PrintView } from './ui/Print';
+import { ServerButton } from './ui/Server';
+import { useStore } from './store';
 
 const TABS: [string, string, string, string[]][] = [
   ['planograms', 'Планограммы', 'grid', ['planograms', 'planogram']],
   ['fixtures', 'Шкафы', 'cabinet', ['fixtures', 'fixture']],
   ['catalog', 'Каталог SKU', 'box', ['catalog']],
   ['compare', 'Сверка IR', 'scan', ['compare']],
+  ['outlets', 'Точки', 'pin', ['outlets']],
 ];
 
 export default function App() {
   const [section = 'planograms', id] = useRoute();
+  useStore(s => s.texRev);   // догрузились фото эталонов — перерисовать миниатюры
+  if (section === 'print' && id) return <><PrintView id={id} /><Toast /></>;
+  if (section === 'pricelist' && id) return <><PriceListView id={id} /><Toast /></>;
   let view;
   if (section === 'planogram' && id) view = <Editor id={id} />;
   else if (section === 'fixtures') view = <Fixtures />;
   else if (section === 'fixture' && id) view = <Constructor id={id} />;
   else if (section === 'catalog') view = <Catalog />;
   else if (section === 'compare') view = <Compare planogramId={id ?? null} />;
+  else if (section === 'outlets') view = <Outlets />;
   else view = <Planograms />;
 
   return (
@@ -38,6 +47,7 @@ export default function App() {
             </a>
           ))}
         </nav>
+        <ServerButton />
       </header>
       <main className="main">{view}</main>
       <Toast />

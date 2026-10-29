@@ -40,7 +40,8 @@ export function zonesOf(fx: Fixture, shelfId: string, row: Placement[], sku: (id
 export function toIrYaml(p: Planogram, sku: (id: string) => Sku | undefined): string {
   const fx = p.fixture;
   const L: string[] = [
-    `# configs/planograms/<client_id>/<outlet_id|default>.yaml — Planogram Studio, ${new Date().toISOString().slice(0, 10)}`,
+    // без даты: опубликованная версия неизменна, один и тот же YAML для одной версии
+    '# configs/planograms/<client_id>/<outlet_id|default>.yaml — Planogram Studio',
     `# ${p.name} · версия ${p.version} · шкаф ${fx.code} ${fx.w}×${fx.h}×${fx.d} мм`,
     `name: ${q(irName(p))}`,
     'category: cigarettes',
@@ -66,7 +67,7 @@ export function toIrYaml(p: Planogram, sku: (id: string) => Sku | undefined): st
   L.push('', p.rules.mustHave.length ? 'required:' : 'required: []');
   p.rules.mustHave.forEach(id => L.push(`  - ${q(irLabel(sku(id), id))}`));
   if (p.ir.twins.length) {
-    L.push('', 'twins:                         # пары, которые сверяются по бренду (align.py пока игнорирует)');
+    L.push('', 'twins:                         # IR их путает: подмена внутри пары считается ok');
     p.ir.twins.forEach(([a, b]) => L.push(`  - [${q(irLabel(sku(a), a))}, ${q(irLabel(sku(b), b))}]`));
   }
   L.push('', 'costs:                         # стоимости выравнивания Needleman–Wunsch');

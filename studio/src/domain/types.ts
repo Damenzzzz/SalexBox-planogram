@@ -84,6 +84,18 @@ export interface AlignCosts {
 
 export type PlanogramStatus = 'draft' | 'review' | 'approved' | 'published';
 
+export type JournalAction = 'created' | 'review' | 'approved' | 'returned' | 'published' | 'version' | 'restored';
+
+export interface JournalEntry {
+  at: string;
+  version: number;
+  action: JournalAction;
+  note: string;
+}
+
+// Кому назначена планограмма: кластеры Studio и отдельные точки (outlet_id)
+export interface Assign { clusters: string[]; outlets: string[] }
+
 export interface Planogram {
   id: string;
   name: string;
@@ -102,11 +114,32 @@ export interface Planogram {
     shareTargets: Partial<Record<Maker, number>>;
   };
   ir: {
-    twins: [string, string][];            // сверять по бренду
+    twins: [string, string][];            // IR путает: подмена внутри пары — ok
     skipShelves: string[];
     costs: AlignCosts;
   };
+  journal: JournalEntry[];                // согласование и версии, новые в конце
+  assign: Assign;
+  publishedAs: string | null;             // имя версии в IR (plg-…-vN), если опубликована
   createdAt: string;
+  updatedAt: string;
+}
+
+// Сохранённая версия планограммы: снимок на момент согласования, утверждения или правки после них
+export interface Snapshot {
+  id: string;
+  planogramId: string;
+  version: number;
+  status: PlanogramStatus;
+  savedAt: string;
+  note: string;
+  data: Planogram;
+}
+
+export interface Cluster {
+  id: string;
+  name: string;
+  outlets: string[];
   updatedAt: string;
 }
 
@@ -162,5 +195,11 @@ export interface IrRun {
   models: string;
   report: IrPlanogramReport;
   imageSize: [number, number] | null;
-  verdicts: Record<string, { v: Verdict; truth?: SlotStatus }>;   // ключ — `${row}:${pos}`
+  verdicts: Record<string, SlotVerdict>;   // ключ — `${row}:${pos}`
+}
+
+export interface SlotVerdict {
+  v: Verdict;
+  truth?: SlotStatus;     // статус на самом деле, если IR ошибся
+  truthSku?: string;      // какая пачка стоит на самом деле (для эталонов галереи и путаниц)
 }

@@ -1,4 +1,5 @@
 import type { Look, Sku } from '../domain/types';
+import { galleryImage } from './gallery';
 
 // ТР ТС 035/2014: предупреждение в верхней части лицевой стороны, не меньше 50 % площади
 export const WARN = { share: 0.5 };
@@ -82,8 +83,16 @@ function paintFace(g: CanvasRenderingContext2D, L: Look, W: number, H: number, t
   g.globalAlpha = 1;
 }
 
-// Лицевая сторона пачки: фирменные цвета, крышка, объём, целлофан, зона предупреждения
-export function makeTexture(sku: Sku, W: number, H: number, warn: boolean): HTMLCanvasElement {
+// Фото эталона по размеру пачки: заполнить без искажений, лишнее срезать по центру
+function paintPhoto(g: CanvasRenderingContext2D, img: HTMLImageElement, W: number, H: number) {
+  const k = Math.max(W / img.naturalWidth, H / img.naturalHeight);
+  const w = img.naturalWidth * k, h = img.naturalHeight * k;
+  g.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+}
+
+// Лицевая сторона пачки: фото эталона из галереи, если сервис его отдаёт, иначе рисуем сами —
+// фирменные цвета, крышка, объём, целлофан, зона предупреждения
+export function makeTexture(sku: Sku, W: number, H: number, warn: boolean, photo: HTMLImageElement | null = null): HTMLCanvasElement {
   const c = document.createElement('canvas');
   c.width = Math.max(6, Math.round(W)); c.height = Math.max(6, Math.round(H));
   W = c.width; H = c.height;
@@ -91,6 +100,16 @@ export function makeTexture(sku: Sku, W: number, H: number, warn: boolean): HTML
   const L = sku.look;
   const flat = H < W;     // блистер лежит плашмя
   rr(g, 0, 0, W, H, Math.max(1, Math.min(W, H) * 0.05)); g.save(); g.clip();
+  if (photo) {
+    paintPhoto(g, photo, W, H);
+    const tv = g.createLinearGradient(0, 0, 0, H);
+    tv.addColorStop(0, 'rgba(255,255,255,.14)'); tv.addColorStop(0.08, 'rgba(255,255,255,0)'); tv.addColorStop(1, 'rgba(0,0,0,.12)');
+    g.fillStyle = tv; g.fillRect(0, 0, W, H);
+    g.restore();
+    rr(g, 0.5, 0.5, W - 1, H - 1, Math.max(1, Math.min(W, H) * 0.05));
+    g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 1; g.stroke();
+    return c;
+  }
   const base = g.createLinearGradient(0, 0, W * 0.4, H);
   base.addColorStop(0, L.c[0]); base.addColorStop(1, L.c[1]);
   g.fillStyle = base; g.fillRect(0, 0, W, H);
@@ -117,13 +136,19 @@ export function makeTexture(sku: Sku, W: number, H: number, warn: boolean): HTML
   return c;
 }
 
+// Фото эталонов включены: setPhotos(true) из настроек Studio
+let photos = true;
+export const setPhotos = (on: boolean) => { photos = on; };
+const photoOf = (sku: Sku) => (photos ? galleryImage(sku.label) : null);
+
 const cache = new Map<string, HTMLCanvasElement>();
 export function texture(sku: Sku, W: number, H: number, warn: boolean) {
-  const key = `${sku.id}|${sku.look.c[0]}|${sku.look.a}|${Math.round(W)}|${Math.round(H)}|${warn ? 1 : 0}`;
+  const photo = photoOf(sku);
+  const key = `${sku.id}|${sku.look.c[0]}|${sku.look.a}|${Math.round(W)}|${Math.round(H)}|${warn ? 1 : 0}|${photo ? 1 : 0}`;
   let t = cache.get(key);
   if (!t) {
     if (cache.size > 2500) cache.clear();
-    t = makeTexture(sku, W, H, warn);
+    t = makeTexture(sku, W, H, warn, photo);
     cache.set(key, t);
   }
   return t;
@@ -132,9 +157,10 @@ export const clearTextures = () => cache.clear();
 
 const thumbs = new Map<string, string>();
 export function thumbURL(sku: Sku, scale = 1.6, warn = false) {
-  const key = `${sku.id}|${sku.w}|${sku.h}|${sku.look.c[0]}|${scale}|${warn}`;
+  const photo = photoOf(sku);
+  const key = `${sku.id}|${sku.w}|${sku.h}|${sku.look.c[0]}|${scale}|${warn}|${photo ? 1 : 0}`;
   let u = thumbs.get(key);
-  if (!u) { u = makeTexture(sku, sku.w * scale, sku.h * scale, warn).toDataURL(); thumbs.set(key, u); }
+  if (!u) { u = makeTexture(sku, sku.w * scale, sku.h * scale, warn, photo).toDataURL(); thumbs.set(key, u); }
   return u;
 }
 export const clearThumbs = () => thumbs.clear();

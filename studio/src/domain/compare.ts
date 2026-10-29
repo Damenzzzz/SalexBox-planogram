@@ -63,23 +63,20 @@ export function runStats(run: IrRun) {
   };
 }
 
-// «Обновить по фото»: новая версия, где раскладка взята из того, что IR увидел.
+// «Новая версия по фото»: раскладка полок из того, что увидел IR (shelfId те же, что у p).
 // Пустые слоты оставляем как в плане: пустота — это нет товара, а не другая раскладка.
-export function planogramFromRun(p: Planogram, run: IrRun): Planogram {
-  const next: Planogram = structuredClone(p);
-  next.id = uid('plg');
-  next.version = p.version + 1;
-  next.status = 'draft';
-  next.name = `${p.name} · по фото`;
-  next.createdAt = next.updatedAt = new Date().toISOString();
-  const top = shelvesTopDown(next.fixture);
+export function rowsFromRun(p: Planogram, run: IrRun): Planogram['rows'] {
+  const rows: Planogram['rows'] = structuredClone(p.rows);
+  const top = shelvesTopDown(p.fixture);
   run.report.rows.forEach(row => {
     if (row.planogram_shelf == null) return;
     const sh = top[row.planogram_shelf - 1];
     if (!sh) return;
     const seq: string[] = [];
     row.slots.forEach(s => {
-      const sku = s.status === 'missing' || s.sku == null ? s.expected_sku : s.sku;
+      const key = slotKey(row.planogram_shelf!, s.pos);
+      const truth = run.verdicts[key]?.truthSku;
+      const sku = truth ?? (s.status === 'missing' || s.sku == null ? s.expected_sku : s.sku);
       if (sku) seq.push(sku);
     });
     const placements: Placement[] = [];
@@ -88,7 +85,86 @@ export function planogramFromRun(p: Planogram, run: IrRun): Planogram {
       if (last && last.sku === sku) last.facings++;
       else placements.push({ id: uid('pl'), sku, facings: 1 });
     });
-    next.rows[sh.id] = placements;
+    rows[sh.id] = placements;
   });
-  return next;
+  return rows;
+}
+
+// Плоская таблица слотов сверки: для Excel и памяти IR
+export interface CompareRow {
+  key: string; photoRow: number; planogramRow: number | null; pos: number;
+  expected: string | null; sku: string | null; status: SlotStatus; conf: number | null; box: IrSlot['box'];
+  verdict: 'right' | 'wrong' | null; truth: SlotStatus | null; truthSku: string | null;
+}
+export function compareRows(run: IrRun): CompareRow[] {
+  return run.report.rows.flatMap(row => row.slots.map(s => {
+    const key = slotKey(rowKey(row), s.pos);
+    const v = run.verdicts[key];
+    return {
+      key, photoRow: row.shelf, planogramRow: row.planogram_shelf, pos: s.pos, expected: s.expected_sku, sku: s.sku, status: s.status,
+      conf: s.conf ?? null, box: s.box ?? null, verdict: v?.v ?? null, truth: v ? truthStatus(run, key, s) : null, truthSku: v?.truthSku ?? null,
+    };
+  }));
+}
+
+// Какая пачка на самом деле в слоте по проверке человека; null — неизвестно или пусто
+export function truePack(x: CompareRow): string | null {
+  if (x.truthSku) return x.truthSku;
+  if (x.verdict === 'right') return x.sku;
+  return null;
+}
+
+export interface Tally { verified: number; right: number }
+export interface Memory {
+  verified: number; right: number;
+  bySku: [string, Tally][];                                  // по ожидаемой SKU слота
+  byModel: { models: string; runs: number; verified: number; right: number; error: number | null }[];
+  confusions: [string, number][];                            // «IR сказал ↔ на самом деле»
+}
+
+// Память IR: точность по SKU и по набору моделей, пары-путаницы — только по проверенным слотам
+export function memoryOf(runs: IrRun[]): Memory {
+  let verified = 0, right = 0;
+  const bySku = new Map<string, Tally>();
+  const byModel = new Map<string, { runs: number; verified: number; right: number; errs: number[] }>();
+  const conf = new Map<string, number>();
+  runs.forEach(r => {
+    const st = runStats(r);
+    const m = byModel.get(r.models || '—') ?? { runs: 0, verified: 0, right: 0, errs: [] };
+    m.runs++; m.verified += st.verified; m.right += st.right;
+    if (st.error != null) m.errs.push(st.error);
+    byModel.set(r.models || '—', m);
+    compareRows(r).forEach(x => {
+      if (!x.verdict) return;
+      verified++;
+      if (x.verdict === 'right') right++;
+      const id = x.expected ?? x.sku ?? x.truthSku;
+      if (id) {
+        const t = bySku.get(id) ?? { verified: 0, right: 0 };
+        t.verified++; if (x.verdict === 'right') t.right++;
+        bySku.set(id, t);
+      }
+      const truth = x.truthSku ?? (x.verdict === 'wrong' && x.status !== 'ok' ? x.expected : null);
+      if (x.verdict === 'wrong' && x.sku && truth && truth !== x.sku) {
+        const k = `${x.sku} ↔ ${truth}`;
+        conf.set(k, (conf.get(k) ?? 0) + 1);
+      }
+    });
+  });
+  return {
+    verified, right,
+    bySku: [...bySku.entries()].sort((a, b) => a[1].right / a[1].verified - b[1].right / b[1].verified || b[1].verified - a[1].verified),
+    byModel: [...byModel.entries()].map(([models, m]) => ({
+      models, runs: m.runs, verified: m.verified, right: m.right, error: m.errs.length ? m.errs.reduce((a, b) => a + b, 0) / m.errs.length : null,
+    })),
+    confusions: [...conf.entries()].sort((a, b) => b[1] - a[1]),
+  };
+}
+
+// Кропы подтверждённых слотов для пополнения галереи: «бренд/модель» → боксы на фото
+export function galleryCrops(run: IrRun): { label: string; box: NonNullable<IrSlot['box']>; key: string }[] {
+  return compareRows(run).flatMap(x => {
+    const label = truePack(x);
+    return label && x.box && label.includes('/') ? [{ label, box: x.box, key: x.key }] : [];
+  });
 }
