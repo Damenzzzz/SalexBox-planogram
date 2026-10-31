@@ -8,7 +8,7 @@ import { STATUS_NAME } from './Planograms';
 
 const parse = (s: string) => [...new Set(s.split(/[\s,;]+/).map(x => x.trim()).filter(Boolean))];
 
-interface Assignment { outlet_id: string; planogram: string; assigned_at: string }
+interface Assignment { outlet_id: string; planogram: string; assigned_at: string; via?: 'outlet' | 'cluster'; cluster?: string | null }
 
 export function Outlets() {
   const clusters = useStore(s => s.clusters);
@@ -73,14 +73,14 @@ export function Outlets() {
         {live ? (
           rows.length ? (
             <table className="table">
-              <thead><tr><th>Точка</th><th>Кластер</th><th>Планограмма в IR</th><th>В Studio</th><th>Назначено</th></tr></thead>
+              <thead><tr><th>Точка</th><th>Кластеры</th><th>Как назначена</th><th>Планограмма</th><th>Назначено</th></tr></thead>
               <tbody>{rows.map(a => {
                 const hit = byName.get(a.planogram);
                 return (
                   <tr key={a.outlet_id}>
                     <td className="mono">{a.outlet_id}</td><td>{clusterOf.get(a.outlet_id)?.join(', ') ?? '—'}</td>
-                    <td className="mono">{a.planogram}</td>
-                    <td>{hit ? <a href={`#/planogram/${hit.p.id}`}>{hit.p.name} · v{hit.version}{hit.p.version !== hit.version ? ` (в работе v${hit.p.version})` : ` · ${STATUS_NAME[hit.p.status]}`}</a> : <span className="hint">нет в Studio</span>}</td>
+                    <td>{a.via === 'cluster' ? `через кластер «${a.cluster}»` : 'напрямую'}</td>
+                    <td>{hit ? <a href={`#/planogram/${hit.p.id}`}>{hit.p.name} · v{hit.version}{hit.p.version !== hit.version ? ` (в работе v${hit.p.version})` : ` · ${STATUS_NAME[hit.p.status]}`}</a> : <span className="mono hint">{a.planogram}</span>}</td>
                     <td>{new Date(a.assigned_at).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}</td>
                   </tr>
                 );

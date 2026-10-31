@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, jsonBody } from '../domain/api';
 import { analyse } from '../domain/checks';
 import { capacity } from '../domain/geometry';
@@ -6,7 +6,7 @@ import { irName, toIrYaml } from '../domain/irExport';
 import { autoLayout, fitToFixture } from '../domain/layout';
 import type { Planogram, Sku, Snapshot } from '../domain/types';
 import { ACTION_RU, diffPlanograms, restoreFrom, withEntry, type Change } from '../domain/versions';
-import { go, keepSnapshot, useCanApprove, useStore } from '../store';
+import { go, keepSnapshot, runSync, useCanApprove, useStore } from '../store';
 import { Icon, Modal, SceneThumb } from './common';
 import { STATUS_NAME } from './Planograms';
 
@@ -76,6 +76,19 @@ function NoteModal({ p, get, kind, onClose, onDone }: { p: Planogram; get: Get; 
 
 const parseOutlets = (s: string) => [...new Set(s.split(/[\s,;]+/).map(x => x.trim()).filter(Boolean))];
 
+// Ответ сервера на публикацию: что станет с точками. dry_run — то же без записи, для предпросмотра
+interface Ref { name: string; title: string | null; version: number | null }
+interface PublishPlan {
+  outlets: number;
+  taken: { outlet_id: string; from: Ref }[];
+  kept: { outlet_id: string; by: Ref }[];
+  clusters_taken: { cluster_id: string; cluster: string; from: Ref }[];
+  dropped: string[];
+  unknown_clusters: string[];
+}
+const refName = (r: Ref) => `«${r.title ?? r.name}»${r.version ? ` v${r.version}` : ''}`;
+const listShort = (xs: string[], n = 8) => `${xs.slice(0, n).join(', ')}${xs.length > n ? ` и ещё ${xs.length - n}` : ''}`;
+
 function PublishModal({ p, get, onClose }: { p: Planogram; get: Get; onClose: () => void }) {
   const me = useStore(s => s.me);
   const clusters = useStore(s => s.clusters);
@@ -84,43 +97,54 @@ function PublishModal({ p, get, onClose }: { p: Planogram; get: Get; onClose: ()
   const [extra, setExtra] = useState((p.assign.outlets.length ? p.assign.outlets : p.outlet ? [p.outlet] : []).join(', '));
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [plan, setPlan] = useState<PublishPlan | null>(null);
+  const [agree, setAgree] = useState(false);
   const name = p.publishedAs ?? irName(p);
-  const outlets = useMemo(() => {
-    const set = new Set(parseOutlets(extra));
-    clusters.filter(c => chosen.includes(c.id)).forEach(c => c.outlets.forEach(o => set.add(o)));
-    return [...set].sort();
-  }, [extra, chosen, clusters]);
+  const yaml = useMemo(() => toIrYaml(p, get), [p, get]);
+  const outlets = useMemo(() => parseOutlets(extra), [extra]);
 
+  const request = useCallback((dryRun: boolean) => api<PublishPlan>({}, `/v1/planograms/${encodeURIComponent(name)}/publish`, {
+    method: 'POST',
+    body: jsonBody({ yaml, planogram_id: p.id, version: p.version, title: p.name, clusters: chosen, outlets, dry_run: dryRun }),
+  }), [name, yaml, p.id, p.version, p.name, chosen, outlets]);
+
+  // Предпросмотр: сначала кластеры уходят на сервер, потом пробная публикация показывает, что изменится
+  useEffect(() => {
+    if (!me) return;
+    let alive = true;
+    const t = setTimeout(async () => {
+      try {
+        await runSync();
+        const r = await request(true);
+        if (alive) { setPlan(r); setError(null); setAgree(false); }
+      } catch (e) { if (alive) setError((e as Error).message); }
+    }, 350);
+    return () => { alive = false; clearTimeout(t); };
+  }, [me, request]);
+
+  const conflicts = (plan?.taken.length ?? 0) + (plan?.clusters_taken.length ?? 0);
   const publish = async () => {
     setError(null);
     try {
-      setBusy('Публикую версию…');
-      await api({}, `/v1/planograms/${encodeURIComponent(name)}`, {
-        method: 'PUT', body: jsonBody({ yaml: toIrYaml(p, get), planogram_id: p.id, version: p.version, title: p.name }),
-      });
-      setBusy('Назначаю точки…');
-      if (outlets.length) await api({}, '/v1/assignments', { method: 'PUT', body: jsonBody({ planogram: name, outlets }) });
-      // точки, которые убрали из списка, больше не сверяются с этой версией
-      const had = await api<{ items: { outlet_id: string }[] }>({}, `/v1/assignments?planogram=${encodeURIComponent(name)}`);
-      const drop = had.items.map(a => a.outlet_id).filter(o => !outlets.includes(o));
-      for (const o of drop) await api({}, `/v1/assignments/${encodeURIComponent(o)}`, { method: 'DELETE' });
+      setBusy('Публикую…');
+      const r = await request(false);
       const first = p.status !== 'published';
-      const next = withEntry({ ...p, status: 'published', publishedAs: name, assign: { clusters: chosen, outlets: parseOutlets(extra) } },
-        'published', `${name}: ${outlets.length} точек${drop.length ? `, снято с ${drop.length}` : ''}`);
+      const next = withEntry({ ...p, status: 'published', publishedAs: name, assign: { clusters: chosen, outlets } },
+        'published', `точек ${r.outlets}${r.taken.length ? `, перехвачено ${r.taken.length}` : ''}${r.dropped.length ? `, снято с ${r.dropped.length}` : ''}`);
       savePlanogram(next);
       if (first) keepSnapshot(next, `v${p.version} · опубликована`);
-      notify(`Опубликовано: ${name}, точек ${outlets.length}. Фото этих точек IR сверит с этой версией`);
+      notify(`Опубликовано: точек ${r.outlets}. Фото с них проверяются по этой версии`);
       onClose();
     } catch (e) {
       const msg = (e as Error).message;
-      setError(msg.includes('409') ? 'Версия с этим именем уже опубликована с другим содержимым. Начните новую версию (любая правка раскладки) или переименуйте планограмму' : msg);
+      setError(msg.includes('409') ? 'Эта версия уже опубликована с другим содержимым. Начните новую версию: любая правка раскладки' : msg);
     } finally { setBusy(null); }
   };
 
   return (
-    <Modal title={p.status === 'published' ? 'Точки опубликованной версии' : 'Опубликовать в IR'} onClose={onClose} footer={<>
+    <Modal title={p.status === 'published' ? 'Точки опубликованной версии' : 'Опубликовать'} onClose={onClose} footer={<>
       <button className="btn" onClick={onClose}>Отмена</button>
-      <button className="btn btn-primary" disabled={!!busy || !me} onClick={publish}><Icon name="cloud" size={15} />{p.status === 'published' ? 'Сохранить точки' : 'Опубликовать'}</button>
+      <button className="btn btn-primary" disabled={!!busy || !me || !plan || (conflicts > 0 && !agree)} onClick={publish}><Icon name="cloud" size={15} />{p.status === 'published' ? 'Сохранить точки' : 'Опубликовать'}</button>
     </>}>
       {!me && <p className="chip chip-warn" style={{ whiteSpace: 'normal', lineHeight: 1.4, padding: '6px 9px' }}>Публикация идёт на сервер: сначала войдите (кнопка «Войти» в шапке).</p>}
       <p>Версия <b>{p.version}</b> уйдёт на проверку фото{me ? <> клиента <b>{me.client}</b></> : null}. Опубликованную версию нельзя изменить: правка начнёт следующую.</p>
@@ -136,7 +160,19 @@ function PublishModal({ p, get, onClose }: { p: Planogram; get: Get; onClose: ()
       </div>
       <label className="field"><span>Отдельные точки (outlet_id через запятую или с новой строки)</span>
         <textarea className="input mono" rows={3} value={extra} onChange={e => setExtra(e.target.value)} placeholder="out_014, out_015" /></label>
-      <p className="hint">Всего точек: <b>{outlets.length}</b>. Фото с этих outlet_id IR сверит с этой версией без поля planogram. Точки, которые уберёте из списка, перестанут с ней сверяться.</p>
+
+      {plan && (
+        <div className="publish-plan">
+          <p>Точек на этой версии после публикации: <b>{plan.outlets}</b>. Точки, добавленные в выбранные кластеры позже, подключатся сами.</p>
+          {plan.taken.length > 0 && <p className="chip chip-warn plan-line">Перейдут с другой планограммы ({plan.taken.length}): {listShort(plan.taken.map(t => `${t.outlet_id} — ${refName(t.from)}`), 6)}</p>}
+          {plan.clusters_taken.length > 0 && <p className="chip chip-warn plan-line">Кластеры сейчас у другой планограммы: {plan.clusters_taken.map(c => `${c.cluster} — ${refName(c.from)}`).join('; ')}</p>}
+          {plan.kept.length > 0 && <p className="hint">Останутся у другой планограммы, им она назначена напрямую ({plan.kept.length}): {listShort(plan.kept.map(k => `${k.outlet_id} — ${refName(k.by)}`), 6)}</p>}
+          {plan.dropped.length > 0 && <p className="hint">Перестанут проверяться по этой планограмме ({plan.dropped.length}): {listShort(plan.dropped)}</p>}
+          {plan.unknown_clusters.length > 0 && <p className="hint">Кластеры ещё сохраняются на сервере, подождите пару секунд.</p>}
+          {conflicts > 0 && <label className="check"><input type="checkbox" checked={agree} onChange={e => setAgree(e.target.checked)} />Да, перевести эти точки на эту планограмму</label>}
+        </div>
+      )}
+      {me && !plan && !error && <p className="hint" role="status">Считаю, что изменится…</p>}
       {busy && <p className="hint" role="status">{busy}</p>}
       {error && <p className="chip chip-err" style={{ whiteSpace: 'normal', lineHeight: 1.4, padding: '6px 9px' }}>{error}</p>}
     </Modal>
