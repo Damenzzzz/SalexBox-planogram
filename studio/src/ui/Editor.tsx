@@ -429,7 +429,7 @@ function EditorView({ p }: { p: Planogram }) {
                 <p className="hint">Нажмите на блок пачек, чтобы менять фейсинги, или перетащите SKU из каталога. Клавиши: ← → двигают блок, ↑ ↓ меняют полку, + − фейсинги, ⌘Z отмена.</p>
               </section>
             ) : null)}
-            {tab === 'props' && !selected && selShelf && <FixtureSize p={p} shelfId={selShelf.id} get={get} update={update} />}
+            {tab === 'props' && selShelf && <FixtureSize p={p} shelfId={selShelf.id} get={get} update={update} />}
 
             {tab === 'rules' && <Rules p={p} update={update} get={get} placed={a.placed} />}
 
