@@ -505,6 +505,7 @@ function Bottom({ p, a, tech, onFix }: { p: Planogram; a: Analysis; tech: boolea
       <div className="stats">
         <div className="stat"><span className="l">Фейсингов</span><span className="v">{a.total}</span><span className="n">заполнение {pct(a.fill)}</span></div>
         <div className="stat"><span className="l">Обязательные</span><span className="v">{must}/{p.rules.mustHave.length}</span><span className="n">must-have</span></div>
+        <div className="stat" title="Проверки «не помещается» точны для замеренных пачек"><span className="l">Замерено</span><span className="v">{a.measured}/{a.placed.length}</span><span className="n">размеры пачек</span></div>
         {tech && <div className="stat"><span className="l">IR-готовность</span><span className="v">{a.ready}/{a.placed.length}</span><span className="n">SKU с 3+ эталонами</span></div>}
         <div className="stat wide">
           <span className="l">Доля полки по производителям · черта — цель контракта</span>
