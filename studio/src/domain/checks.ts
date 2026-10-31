@@ -21,6 +21,7 @@ export interface Analysis {
   total: number;
   fill: number;
   placed: string[];
+  measured: number; // SKU на шкафу с замеренными размерами
   ready: number;   // SKU с 3+ эталонами
   thin: number;    // SKU с 1–2 эталонами
   noRefs: number;
@@ -28,6 +29,10 @@ export interface Analysis {
 
 // Пороги распознавания полок табака
 export const IR_LIMITS = { minOuterItems: 3, aspect: [1.3, 2.4] as const, minAspect: 0.9, readyRefs: 3 };
+
+// Справочный размер пачки расходится с реальным на 2–3 мм. Пока пачка не замерена, перебор в
+// эти миллиметры — не ошибка, а повод замерить
+export const SIZE_TOLERANCE = 3;
 
 export function analyse(p: Planogram, sku: (id: string) => Sku | undefined): Analysis {
   const fx = p.fixture;
@@ -45,7 +50,13 @@ export function analyse(p: Planogram, sku: (id: string) => Sku | undefined): Ana
     const used = usedWidth(fx, sh, row, sku);
     fillSum += Math.min(1, used / innerW(fx));
     if (used > innerW(fx)) {
-      issues.push({ sev: 'error', shelfId: sh.id, text: `${name}: не помещается ${Math.ceil(used - innerW(fx))} мм. Уберите фейсинг или выберите SKU уже` });
+      const over = Math.ceil(used - innerW(fx));
+      const rough = row.reduce((a, q) => a + (sku(q.sku)?.measured ? 0 : q.facings), 0);
+      if (rough && over <= rough * SIZE_TOLERANCE) {
+        issues.push({ sev: 'info', shelfId: sh.id, text: `${name}: по справочным размерам не хватает ${over} мм. Пачки на полке не замерены, реальная ширина может уложиться — замерьте` });
+      } else {
+        issues.push({ sev: 'error', shelfId: sh.id, text: `${name}: не помещается ${over} мм. Уберите фейсинг или выберите SKU уже` });
+      }
     }
     const n = row.reduce((a, q) => a + q.facings, 0);
     if (!row.length && !p.ir.skipShelves.includes(sh.id)) {
@@ -59,11 +70,17 @@ export function analyse(p: Planogram, sku: (id: string) => Sku | undefined): Ana
       facings[s.id] = (facings[s.id] ?? 0) + q.facings;
       byMaker[s.maker] = (byMaker[s.maker] ?? 0) + q.facings;
       total += q.facings;
-      if (s.h > clearanceOf(fx, sh)) {
-        issues.push({ sev: 'error', shelfId: sh.id, placementId: q.id, text: `${name}: ${s.name} (${s.h} мм) выше просвета ${Math.round(clearanceOf(fx, sh))} мм` });
+      const tall = s.h - clearanceOf(fx, sh), wide = s.w - laneOf(fx, sh, s);
+      const rough = !s.measured;
+      if (tall > 0) {
+        issues.push(rough && tall <= SIZE_TOLERANCE
+          ? { sev: 'info', shelfId: sh.id, placementId: q.id, text: `${name}: ${s.name} по справочной высоте выше просвета на ${Math.ceil(tall)} мм. Замерьте пачку` }
+          : { sev: 'error', shelfId: sh.id, placementId: q.id, text: `${name}: ${s.name} (${s.h} мм) выше просвета ${Math.round(clearanceOf(fx, sh))} мм` });
       }
-      if (laneOf(fx, sh, s) < s.w) {
-        issues.push({ sev: 'error', shelfId: sh.id, placementId: q.id, text: `${name}: ${s.name} шире ряда толкателя` });
+      if (wide > 0) {
+        issues.push(rough && wide <= SIZE_TOLERANCE
+          ? { sev: 'info', shelfId: sh.id, placementId: q.id, text: `${name}: ${s.name} по справочной ширине шире ряда на ${Math.ceil(wide)} мм. Замерьте пачку` }
+          : { sev: 'error', shelfId: sh.id, placementId: q.id, text: `${name}: ${s.name} шире ряда толкателя` });
       }
       const next = row[i + 1];
       if (next && next.sku !== q.sku && twins.has([q.sku, next.sku].sort().join('|'))) {
@@ -102,7 +119,8 @@ export function analyse(p: Planogram, sku: (id: string) => Sku | undefined): Ana
 
   const order: Record<Severity, number> = { error: 0, contract: 1, ir: 2, info: 3 };
   issues.sort((a, b) => order[a.sev] - order[b.sev]);
-  return { issues, facings, byMaker, total, fill: shelves.length ? fillSum / shelves.length : 0, placed, ready, thin, noRefs };
+  const measured = placed.filter(id => sku(id)?.measured).length;
+  return { issues, facings, byMaker, total, fill: shelves.length ? fillSum / shelves.length : 0, placed, measured, ready, thin, noRefs };
 }
 
 // Проверки, которые видит пользователь: технические про галерею IR — только в режиме инженера

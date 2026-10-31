@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { makeLook } from '../domain/catalog';
+import { download } from '../domain/io';
+import { measuresTemplate, parseMeasures } from '../domain/measures';
 import { FORMATS, FORMAT_ORDER, MAKERS, MAKER_ORDER, SEGMENTS } from '../domain/formats';
 import { uid } from '../domain/geometry';
 import type { FormatId, Maker, Segment, Sku, SkuPatch } from '../domain/types';
@@ -14,15 +16,30 @@ export function Catalog() {
   const { patchSku, resetSku, saveCustomSku, deleteCustomSku, notify } = useStore.getState();
   const [query, setQuery] = useState('');
   const [maker, setMaker] = useState<Maker | 'ALL'>('ALL');
-  const [view, setView] = useState<'all' | 'guessed' | 'norefs' | 'edited'>('all');
+  const [view, setView] = useState<'all' | 'guessed' | 'norefs' | 'edited' | 'rough' | 'placed'>('all');
   const [adding, setAdding] = useState(false);
+  const file = useRef<HTMLInputElement>(null);
+  const planograms = useStore(s => s.planograms);
+  const placed = useMemo(() => new Set(planograms.flatMap(p => Object.values(p.rows).flat().map(q => q.sku))), [planograms]);
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return list.filter(s => (maker === 'ALL' || s.maker === maker)
-      && (view === 'all' || (view === 'guessed' && s.formatGuessed) || (view === 'norefs' && s.refs < 3) || (view === 'edited' && (patches[s.id] || s.custom)))
+      && (view === 'all' || (view === 'guessed' && s.formatGuessed) || (view === 'norefs' && s.refs < 3) || (view === 'edited' && (patches[s.id] || s.custom))
+        || (view === 'rough' && !s.measured) || (view === 'placed' && placed.has(s.id)))
       && (!q || s.id.toLowerCase().includes(q) || s.name.toLowerCase().includes(q)));
-  }, [list, query, maker, view, patches]);
+  }, [list, query, maker, view, patches, placed]);
+
+  // Замеры таблицей: выгрузить шаблон, заполнить, загрузить обратно
+  const onMeasures = async (f: File) => {
+    try {
+      const r = parseMeasures(await f.text(), list);
+      const byId = new Map(list.map(s => [s.id, s]));
+      r.patches.forEach(([id, patch]) => { const s = byId.get(id); if (s) edit(s, patch); });
+      notify(`Обновлено SKU: ${r.patches.length}, из них с замером: ${r.measured}${r.missing.length ? `. Не нашёл в каталоге: ${r.missing.slice(0, 5).join(', ')}${r.missing.length > 5 ? ` и ещё ${r.missing.length - 5}` : ''}` : ''}`);
+    } catch (e) { notify(`Файл не прочитан: ${(e as Error).message}`); }
+  };
+  const roughOnShelves = list.filter(s => placed.has(s.id) && !s.measured).length;
 
   const edit = (s: Sku, patch: SkuPatch) => {
     if (s.custom) {
@@ -41,9 +58,15 @@ export function Catalog() {
       <div className="page-head">
         <div>
           <h1>Каталог SKU</h1>
-          <p>Сигареты, из которых собираются планограммы: производитель, сегмент, формат, размеры пачки, цена и EAN. Размеры по умолчанию справочные; после замера пачки отметьте «замер», и редактор будет считать по нему.</p>
+          <p>Сигареты, из которых собираются планограммы: производитель, сегмент, формат, размеры пачки, цена, продажи и EAN. Размеры по умолчанию справочные; после замера пачки отметьте «замер», и редактор будет считать по нему. Много замеров удобнее внести таблицей: «Таблица замеров» → заполнить в Excel → «Загрузить замеры».</p>
+          {roughOnShelves > 0 && <p className="hint">На шкафах {roughOnShelves} SKU без замера: проверки «не помещается» для них приблизительные.</p>}
         </div>
-        <div className="actions"><button className="btn btn-primary" onClick={() => setAdding(true)}><Icon name="plus" />Свой SKU</button></div>
+        <div className="actions">
+          <button className="btn" onClick={() => download('замеры пачек.csv', measuresTemplate(view === 'placed' || view === 'rough' ? rows : list), 'text/csv')}><Icon name="download" />Таблица замеров</button>
+          <button className="btn" onClick={() => file.current?.click()}><Icon name="upload" />Загрузить замеры</button>
+          <input ref={file} type="file" accept=".csv,.txt" hidden onChange={e => { const f = e.target.files?.[0]; if (f) onMeasures(f); e.target.value = ''; }} />
+          <button className="btn btn-primary" onClick={() => setAdding(true)}><Icon name="plus" />Свой SKU</button>
+        </div>
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
         <input className="input" style={{ maxWidth: 320 }} type="search" placeholder="Поиск по названию" value={query} onChange={e => setQuery(e.target.value)} aria-label="Поиск SKU" />
@@ -51,7 +74,7 @@ export function Catalog() {
           {(['ALL', ...MAKER_ORDER] as (Maker | 'ALL')[]).map(m => <button key={m} type="button" aria-pressed={maker === m} onClick={() => setMaker(m)}>{m === 'ALL' ? 'Все' : MAKERS[m]}</button>)}
         </div>
         <div className="filters" role="group" aria-label="Показать">
-          {([['all', 'Все'], ['guessed', 'Формат не ясен'], ...(tech ? [['norefs', 'Мало эталонов']] as const : []), ['edited', 'Изменённые и свои']] as const).map(([k, v]) => <button key={k} type="button" aria-pressed={view === k} onClick={() => setView(k)}>{v}</button>)}
+          {([['all', 'Все'], ['placed', 'На шкафах'], ['rough', 'Без замера'], ['guessed', 'Формат не ясен'], ...(tech ? [['norefs', 'Мало эталонов']] as const : []), ['edited', 'Изменённые и свои']] as const).map(([k, v]) => <button key={k} type="button" aria-pressed={view === k} onClick={() => setView(k)}>{v}</button>)}
         </div>
         <span className="hint">{rows.length} в списке</span>
       </div>
