@@ -11,6 +11,7 @@ export interface Issue {
   placementId?: string;
   addSku?: string;      // кнопка «Добавить»
   skuId?: string;
+  tech?: boolean;       // про галерею и метки IR: видно только инженеру
 }
 
 export interface Analysis {
@@ -25,7 +26,7 @@ export interface Analysis {
   noRefs: number;
 }
 
-// Пороги из configs/shelf/cigarettes.yaml и configs/categories/cigarettes.yaml
+// Пороги распознавания полок табака
 export const IR_LIMITS = { minOuterItems: 3, aspect: [1.3, 2.4] as const, minAspect: 0.9, readyRefs: 3 };
 
 export function analyse(p: Planogram, sku: (id: string) => Sku | undefined): Analysis {
@@ -39,7 +40,7 @@ export function analyse(p: Planogram, sku: (id: string) => Sku | undefined): Ana
 
   shelves.forEach((sh, si) => {
     const row = p.rows[sh.id] ?? [];
-    const { fromBottom, irRow } = shelfIndex(fx, sh.id);
+    const { fromBottom } = shelfIndex(fx, sh.id);
     const name = `Полка ${fromBottom}`;
     const used = usedWidth(fx, sh, row, sku);
     fillSum += Math.min(1, used / innerW(fx));
@@ -48,9 +49,9 @@ export function analyse(p: Planogram, sku: (id: string) => Sku | undefined): Ana
     }
     const n = row.reduce((a, q) => a + q.facings, 0);
     if (!row.length && !p.ir.skipShelves.includes(sh.id)) {
-      issues.push({ sev: 'info', shelfId: sh.id, text: `${name} пустая. IR увидит её как пустой ряд, если не исключить полку из сверки` });
+      issues.push({ sev: 'info', shelfId: sh.id, text: `${name} пустая. На фото она будет пустым рядом, если не исключить её из проверки` });
     } else if ((si === 0 || si === shelves.length - 1) && n > 0 && n < IR_LIMITS.minOuterItems) {
-      issues.push({ sev: 'ir', shelfId: sh.id, text: `${name} (IR-ряд ${irRow}): ${n} пачки на крайней полке. IR не считает крайний ряд из 1–2 пачек полкой (min_outer_items: 3)` });
+      issues.push({ sev: 'ir', shelfId: sh.id, text: `${name}: всего ${n} пачки на крайней полке. Ряд из 1–2 пачек распознавание не считает полкой, поставьте хотя бы 3` });
     }
     row.forEach((q, i) => {
       const s = sku(q.sku);
@@ -66,7 +67,7 @@ export function analyse(p: Planogram, sku: (id: string) => Sku | undefined): Ana
       }
       const next = row[i + 1];
       if (next && next.sku !== q.sku && twins.has([q.sku, next.sku].sort().join('|'))) {
-        issues.push({ sev: 'ir', shelfId: sh.id, placementId: next.id, text: `${name}: ${s.name} и ${sku(next.sku)?.name ?? next.sku} стоят рядом, а IR их путает. Разнесите по полкам или оставьте сверку этой пары по бренду` });
+        issues.push({ sev: 'ir', shelfId: sh.id, placementId: next.id, text: `${name}: ${s.name} и ${sku(next.sku)?.name ?? next.sku} похожи и стоят рядом. Распознавание может их перепутать, лучше разнести` });
       }
     });
   });
@@ -89,13 +90,13 @@ export function analyse(p: Planogram, sku: (id: string) => Sku | undefined): Ana
   placed.forEach(id => {
     const s = sku(id);
     if (!s) return;
-    if (!s.label) issues.push({ sev: 'ir', skuId: id, text: `${s.name}: нет IR-метки. IR сверит только бренд` });
-    else if (s.refs === 0) { noRefs++; issues.push({ sev: 'ir', skuId: id, text: `${s.name}: нет эталонов в галерее. Добавьте 3+ фото с полки` }); }
+    if (!s.label) issues.push({ sev: 'ir', skuId: id, tech: true, text: `${s.name}: нет IR-метки. IR сверит только бренд` });
+    else if (s.refs === 0) { noRefs++; issues.push({ sev: 'ir', skuId: id, tech: true, text: `${s.name}: нет эталонов в галерее. Добавьте 3+ фото с полки` }); }
     else if (s.refs < IR_LIMITS.readyRefs) thin++;
     else ready++;
     const aspect = s.h / s.w;
-    if (aspect < IR_LIMITS.minAspect) issues.push({ sev: 'ir', skuId: id, text: `${s.name}: пачка лежит (В/Ш ${aspect.toFixed(2)}). IR такие боксы не считает (min_aspect 0.9)` });
-    else if (aspect < IR_LIMITS.aspect[0] || aspect > IR_LIMITS.aspect[1]) issues.push({ sev: 'ir', skuId: id, text: `${s.name}: пропорции В/Ш ${aspect.toFixed(2)} вне 1.3–2.4. Ряд может не попасть в табачный стеллаж (category_aspect)` });
+    if (aspect < IR_LIMITS.minAspect) issues.push({ sev: 'ir', skuId: id, text: `${s.name}: пачка лежит на боку (высота меньше ширины). Распознавание такие пачки не считает` });
+    else if (aspect < IR_LIMITS.aspect[0] || aspect > IR_LIMITS.aspect[1]) issues.push({ sev: 'ir', skuId: id, text: `${s.name}: необычные пропорции пачки. Проверьте размеры в каталоге` });
     if (s.formatGuessed) issues.push({ sev: 'info', skuId: id, text: `${s.name}: формат не указан в метке, взят King Size. Проверьте в каталоге` });
   });
 
@@ -103,3 +104,6 @@ export function analyse(p: Planogram, sku: (id: string) => Sku | undefined): Ana
   issues.sort((a, b) => order[a.sev] - order[b.sev]);
   return { issues, facings, byMaker, total, fill: shelves.length ? fillSum / shelves.length : 0, placed, ready, thin, noRefs };
 }
+
+// Проверки, которые видит пользователь: технические про галерею IR — только в режиме инженера
+export const visibleIssues = (a: Analysis, tech: boolean) => (tech ? a.issues : a.issues.filter(i => !i.tech));

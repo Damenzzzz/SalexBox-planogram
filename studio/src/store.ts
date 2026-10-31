@@ -14,9 +14,10 @@ export interface Settings {
   apiBase: string; apiKey: string; warn: boolean;
   sync: boolean;               // хранить шкафы, планограммы и сверки в IR-сервисе
   galleryTextures: boolean;    // фото эталонов вместо нарисованных пачек, если сервис их отдаёт
+  tech: boolean;               // технические детали IR: метки, эталоны, YAML, стоимости выравнивания
 }
 
-const DEFAULT_SETTINGS: Settings = { apiBase: '', apiKey: '', warn: true, sync: false, galleryTextures: true };
+const DEFAULT_SETTINGS: Settings = { apiBase: '', apiKey: '', warn: true, sync: false, galleryTextures: true, tech: false };
 
 export interface Data {
   fixtures: Fixture[];
@@ -244,6 +245,9 @@ function refreshGallery() {
 }
 refreshGallery();
 if (useStore.getState().settings.sync) scheduleSync(300);
+
+// Технические блоки IR видны только инженеру; обычный пользователь их не видит
+export const useTech = () => useStore(s => s.settings.tech);
 
 export function useCatalog() {
   const patches = useStore(s => s.patches);

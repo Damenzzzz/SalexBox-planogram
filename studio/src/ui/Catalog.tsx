@@ -1,15 +1,16 @@
 import { useMemo, useState } from 'react';
-import { GALLERY_META, makeLook } from '../domain/catalog';
+import { makeLook } from '../domain/catalog';
 import { FORMATS, FORMAT_ORDER, MAKERS, MAKER_ORDER, SEGMENTS } from '../domain/formats';
 import { uid } from '../domain/geometry';
 import type { FormatId, Maker, Segment, Sku, SkuPatch } from '../domain/types';
 import { thumbURL } from '../render/textures';
-import { useCatalog, useStore } from '../store';
+import { useCatalog, useStore, useTech } from '../store';
 import { Icon, Modal } from './common';
 
 export function Catalog() {
   const { list } = useCatalog();
   const patches = useStore(s => s.patches);
+  const tech = useTech();
   const { patchSku, resetSku, saveCustomSku, deleteCustomSku, notify } = useStore.getState();
   const [query, setQuery] = useState('');
   const [maker, setMaker] = useState<Maker | 'ALL'>('ALL');
@@ -40,28 +41,28 @@ export function Catalog() {
       <div className="page-head">
         <div>
           <h1>Каталог SKU</h1>
-          <p>{list.length} SKU: метки галереи {GALLERY_META.source} (снимок {GALLERY_META.snapshot}) и свои. Формат и размеры взяты из метки и справочника; после замера пачки отметьте «замер», и редактор будет считать по нему.</p>
+          <p>Сигареты, из которых собираются планограммы: производитель, сегмент, формат, размеры пачки, цена и EAN. Размеры по умолчанию справочные; после замера пачки отметьте «замер», и редактор будет считать по нему.</p>
         </div>
         <div className="actions"><button className="btn btn-primary" onClick={() => setAdding(true)}><Icon name="plus" />Свой SKU</button></div>
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-        <input className="input" style={{ maxWidth: 320 }} type="search" placeholder="Поиск по названию или метке" value={query} onChange={e => setQuery(e.target.value)} aria-label="Поиск SKU" />
+        <input className="input" style={{ maxWidth: 320 }} type="search" placeholder="Поиск по названию" value={query} onChange={e => setQuery(e.target.value)} aria-label="Поиск SKU" />
         <div className="filters" role="group" aria-label="Производитель">
           {(['ALL', ...MAKER_ORDER] as (Maker | 'ALL')[]).map(m => <button key={m} type="button" aria-pressed={maker === m} onClick={() => setMaker(m)}>{m === 'ALL' ? 'Все' : MAKERS[m]}</button>)}
         </div>
         <div className="filters" role="group" aria-label="Показать">
-          {([['all', 'Все'], ['guessed', 'Формат не ясен'], ['norefs', 'Мало эталонов'], ['edited', 'Изменённые и свои']] as const).map(([k, v]) => <button key={k} type="button" aria-pressed={view === k} onClick={() => setView(k)}>{v}</button>)}
+          {([['all', 'Все'], ['guessed', 'Формат не ясен'], ...(tech ? [['norefs', 'Мало эталонов']] as const : []), ['edited', 'Изменённые и свои']] as const).map(([k, v]) => <button key={k} type="button" aria-pressed={view === k} onClick={() => setView(k)}>{v}</button>)}
         </div>
         <span className="hint">{rows.length} в списке</span>
       </div>
       <div className="table-wrap">
         <table className="data">
-          <thead><tr><th /><th>SKU</th><th>Производитель</th><th>Сегмент</th><th>Формат</th><th>Ш</th><th>В</th><th>Г</th><th>Замер</th><th>Цена ₸</th><th>EAN</th><th>Эталоны</th><th /></tr></thead>
+          <thead><tr><th /><th>SKU</th><th>Производитель</th><th>Сегмент</th><th>Формат</th><th>Ш</th><th>В</th><th>Г</th><th>Замер</th><th>Цена ₸</th><th>EAN</th>{tech && <th>Эталоны</th>}<th /></tr></thead>
           <tbody>
             {rows.map(s => (
               <tr key={s.id}>
                 <td><img src={thumbURL(s, 1)} alt="" /></td>
-                <td className="name" title={s.label ?? 'нет в галерее'}><b>{s.name}</b><div className="hint mono">{s.label ?? 'свой SKU, без IR-метки'}</div></td>
+                <td className="name"><b>{s.name}</b>{tech ? <div className="hint mono">{s.label ?? 'свой SKU, без IR-метки'}</div> : s.custom ? <div className="hint">свой SKU</div> : null}</td>
                 <td><select className="select" value={s.maker} aria-label="Производитель" onChange={e => edit(s, { maker: e.target.value as Maker })}>{MAKER_ORDER.map(m => <option key={m} value={m}>{MAKERS[m]}</option>)}</select></td>
                 <td><select className="select" value={s.segment} aria-label="Сегмент" onChange={e => edit(s, { segment: e.target.value as Segment })}>{Object.entries(SEGMENTS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></td>
                 <td><select className="select" value={s.format} aria-label="Формат" onChange={e => edit(s, { format: e.target.value as FormatId })}>{FORMAT_ORDER.map(f => <option key={f} value={f}>{FORMATS[f].name}{s.formatGuessed && f === s.format ? ' ?' : ''}</option>)}</select></td>
@@ -72,7 +73,7 @@ export function Catalog() {
                 <td><input type="checkbox" checked={s.measured} aria-label="Размеры сняты с пачки" onChange={e => edit(s, { measured: e.target.checked })} /></td>
                 <td className="w-num"><input className="input" defaultValue={s.price ?? ''} key={`${s.id}-p-${s.price}`} aria-label="Цена" onBlur={e => edit(s, { price: num(e.target.value) })} /></td>
                 <td style={{ width: 150 }}><input className="input mono" defaultValue={s.ean} key={`${s.id}-e-${s.ean}`} aria-label="EAN" onBlur={e => { if (e.target.value !== s.ean) edit(s, { ean: e.target.value.trim() }); }} /></td>
-                <td>{s.refs === 0 ? <span className="chip chip-err">0</span> : s.refs < 3 ? <span className="chip chip-warn">{s.refs}</span> : <span className="chip chip-ok">{s.refs}</span>}</td>
+                {tech && <td>{s.refs === 0 ? <span className="chip chip-err">0</span> : s.refs < 3 ? <span className="chip chip-warn">{s.refs}</span> : <span className="chip chip-ok">{s.refs}</span>}</td>}
                 <td>
                   {s.custom
                     ? <button className="btn btn-sm btn-ghost icon-btn" aria-label="Удалить свой SKU" onClick={() => { deleteCustomSku(s.id); notify('SKU удалён'); }}><Icon name="trash" size={14} /></button>
@@ -89,6 +90,7 @@ export function Catalog() {
 }
 
 function NewSku({ onClose, onSave }: { onClose: () => void; onSave: (s: Sku) => void }) {
+  const tech = useTech();
   const [brand, setBrand] = useState('');
   const [name, setName] = useState('');
   const [label, setLabel] = useState('');
@@ -113,9 +115,9 @@ function NewSku({ onClose, onSave }: { onClose: () => void; onSave: (s: Sku) => 
         <label className="field"><span>Формат</span><select className="select" value={format} onChange={e => setFormat(e.target.value as FormatId)}>{FORMAT_ORDER.map(f => <option key={f} value={f}>{FORMATS[f].name}</option>)}</select></label>
         <label className="field"><span>Производитель</span><select className="select" value={maker} onChange={e => setMaker(e.target.value as Maker)}>{MAKER_ORDER.map(m => <option key={m} value={m}>{MAKERS[m]}</option>)}</select></label>
         <label className="field"><span>Сегмент</span><select className="select" value={segment} onChange={e => setSegment(e.target.value as Segment)}>{Object.entries(SEGMENTS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
-        <label className="field"><span>IR-метка, если уже есть в галерее</span><input className="input mono" value={label} onChange={e => setLabel(e.target.value)} placeholder="Kent/Kent Crystal Ice SS" /></label>
+        {tech && <label className="field"><span>IR-метка, если уже есть в галерее</span><input className="input mono" value={label} onChange={e => setLabel(e.target.value)} placeholder="Kent/Kent Crystal Ice SS" /></label>}
       </div>
-      <p className="hint">Без эталонов в галерее IR не узнает модель и сверит этот SKU только по бренду. Эталоны заливаются через salesbox-gallery в коллекцию recognition_ref.</p>
+      <p className="hint">Новую пачку распознавание сначала узнаёт по бренду. Чтобы оно узнавало именно эту модель, передайте инженеру IR несколько фото пачки с полки.</p>
     </Modal>
   );
 }

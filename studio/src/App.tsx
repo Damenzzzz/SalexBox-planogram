@@ -7,6 +7,7 @@ import { Editor } from './ui/Editor';
 import { Catalog } from './ui/Catalog';
 import { Compare } from './ui/Compare';
 import { Outlets } from './ui/Outlets';
+import { Help } from './ui/Help';
 import { PriceListView, PrintView } from './ui/Print';
 import { ServerButton } from './ui/Server';
 import { useStore } from './store';
@@ -31,6 +32,7 @@ export default function App() {
   else if (section === 'catalog') view = <Catalog />;
   else if (section === 'compare') view = <Compare planogramId={id ?? null} />;
   else if (section === 'outlets') view = <Outlets />;
+  else if (section === 'help') view = <Help />;
   else view = <Planograms />;
 
   return (
@@ -47,6 +49,7 @@ export default function App() {
             </a>
           ))}
         </nav>
+        <a className={`btn btn-sm btn-ghost help-link${section === 'help' ? ' is-on' : ''}`} href="#/help" aria-current={section === 'help' ? 'page' : undefined}><Icon name="help" size={16} /><span>Помощь</span></a>
         <ServerButton />
       </header>
       <main className="main">{view}</main>
