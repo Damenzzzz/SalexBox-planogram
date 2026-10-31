@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { analyse, type Issue } from '../domain/checks';
+import { analyse, visibleIssues, type Analysis, type Issue } from '../domain/checks';
 import { FORMATS, FORMAT_ORDER, MAKERS, MAKER_ORDER, SEGMENTS } from '../domain/formats';
 import { clearanceOf, innerW, laneOf, packFloor, packsDeep, shelfIndex, shelvesTopDown, uid, usedWidth } from '../domain/geometry';
 import { planogramSheets } from '../domain/exports';
@@ -10,7 +10,7 @@ import { needsNewVersion, nextVersion } from '../domain/versions';
 import { XLSX_TYPE, downloadBytes, xlsx } from '../domain/xlsx';
 import { thumbURL } from '../render/textures';
 import { MARGIN, drawScene, sceneSize, type HitRect } from '../render/scene';
-import { go, useCatalog, useStore } from '../store';
+import { go, useCatalog, useStore, useTech } from '../store';
 import { Icon, Menu, NumField, Seg, Stage, facingsWord, pct, useHistory, type StageHandle } from './common';
 import { AutoModal, FitModal, VersionsPanel, WorkflowBar } from './Workflow';
 
@@ -28,6 +28,7 @@ function EditorView({ p }: { p: Planogram }) {
   const settings = useStore(s => s.settings);
   const template = useStore(s => (p.templateId ? s.fixtures.find(f => f.id === p.templateId) : undefined));
   const { savePlanogram, setSettings, notify } = useStore.getState();
+  const tech = useTech();
   const fx = p.fixture;
   const stage = useRef<StageHandle>(null);
   const [mode, setMode] = useState<Mode>('texture');
@@ -238,7 +239,7 @@ function EditorView({ p }: { p: Planogram }) {
   const selected = selP ? find(selP) : null;
   const selSku = selected ? get(selected.pl.sku) : undefined;
   const selShelf = fx.shelves.find(s => s.id === (selected?.sid ?? selS));
-  const yaml = tab === 'ir' ? toIrYaml(p, get) : '';
+  const yaml = tab === 'ir' && tech ? toIrYaml(p, get) : '';
   const outdated = template && p.templateVersion != null && template.version > p.templateVersion;
 
   return (
@@ -258,7 +259,7 @@ function EditorView({ p }: { p: Planogram }) {
           { label: 'Подогнать под другой шкаф', icon: 'cabinet', hint: 'новая планограмма на другом размере', onClick: () => setTool('fit') },
         ]} />
         <Menu label="Выгрузить" icon="download" items={[
-          { label: 'YAML для IR', icon: 'file', hint: 'configs/planograms', onClick: () => download(`${irName(p)}.yaml`, toIrYaml(p, get), 'text/yaml') },
+          ...(tech ? [{ label: 'YAML для IR', icon: 'file', hint: 'файл планограммы для распознавания', onClick: () => download(`${irName(p)}.yaml`, toIrYaml(p, get), 'text/yaml') }] : []),
           { label: 'Excel', icon: 'grid', hint: 'раскладка, сводка, правила, проверки', onClick: () => downloadBytes(`${irName(p)}.xlsx`, xlsx(planogramSheets(p, get)), XLSX_TYPE) },
           { label: 'Картинка PNG', icon: 'image', onClick: () => exportPng(p, get, settings.warn) },
           { label: 'Печать и PDF', icon: 'print', hint: 'схема для мерчендайзера', onClick: () => window.open(`#/print/${p.id}`, '_blank') },
@@ -301,7 +302,7 @@ function EditorView({ p }: { p: Planogram }) {
                     <b title={s.id}>{s.name}</b>
                     <span className="sub">
                       {MAKERS[s.maker]} · {FORMATS[s.format].name}
-                      {s.refs === 0 ? <span className="chip chip-err">нет эталонов</span> : s.refs < 3 ? <span className="chip chip-warn">IR {s.refs} эт.</span> : <span className="chip chip-ok">IR {s.refs} эт.</span>}
+                      {tech && (s.refs === 0 ? <span className="chip chip-err">нет эталонов</span> : s.refs < 3 ? <span className="chip chip-warn">IR {s.refs} эт.</span> : <span className="chip chip-ok">IR {s.refs} эт.</span>)}
                       {a.facings[s.id] ? <span className="mono">{a.facings[s.id]} ф.</span> : null}
                     </span>
                   </div>
@@ -328,7 +329,7 @@ function EditorView({ p }: { p: Planogram }) {
             {mode === 'schema' && <span className="legend">{Object.entries(SEGMENTS).map(([k, v], i) => <span key={k}><i style={{ background: `var(--seg-${i + 1})` }} />{v}</span>)}</span>}
             {mode === 'ir' && <span className="legend"><span><i style={{ border: '1.5px solid var(--st-ok)' }} />бокс</span><span><i style={{ border: '1.5px dashed var(--ir)' }} />зона распознавания</span><span><i style={{ background: 'var(--ir)' }} />зона бренда</span></span>}
             <span className="grow" />
-            <button className="btn btn-sm" aria-expanded={showBottom} onClick={() => setShowBottom(v => !v)}>Проверки · {a.issues.length}</button>
+            <button className="btn btn-sm" aria-expanded={showBottom} onClick={() => setShowBottom(v => !v)}>Проверки · {visibleIssues(a, tech).length}</button>
             <button className="btn btn-sm icon-btn" aria-label="Отдалить" onClick={() => setZoom(z => Math.max(0.5, z / 1.25))}><Icon name="minus" size={15} /></button>
             <button className="btn btn-sm" onClick={() => setZoom(1)}>Весь шкаф</button>
             <button className="btn btn-sm icon-btn" aria-label="Приблизить" onClick={() => setZoom(z => Math.min(3, z * 1.25))}><Icon name="plus" size={15} /></button>
@@ -363,13 +364,13 @@ function EditorView({ p }: { p: Planogram }) {
             }}
             onPointerLeave={() => { setHover(null); setTip(null); }}
           />
-          {showBottom ? <Bottom p={p} a={a} onFix={fixIssue} /> : <div />}
+          {showBottom ? <Bottom p={p} a={a} tech={tech} onFix={fixIssue} /> : <div />}
         </div>
 
         {/* инспектор */}
         <aside className="pane pane-r">
           <div className="pane-head">
-            <Seg label="Панель" value={tab} options={[['props', 'Свойства'], ['rules', 'Правила'], ['ir', 'IR'], ['versions', 'Версии']]} onChange={setTab} />
+            <Seg label="Панель" value={tab} options={[['props', 'Свойства'], ['rules', 'Правила'], ['ir', 'Проверка'], ['versions', 'Версии']]} onChange={setTab} />
           </div>
           <div className="pane-scroll">
             {tab === 'props' && (selected && selSku && selShelf ? (
@@ -377,7 +378,7 @@ function EditorView({ p }: { p: Planogram }) {
                 <div className="insp-head">
                   <img src={thumbURL(selSku, 2.2, settings.warn)} alt={selSku.name} />
                   <div>
-                    <p className="eyebrow">Полка {shelfIndex(fx, selected.sid).fromBottom} · IR-ряд {shelfIndex(fx, selected.sid).irRow} · позиция {selected.i + 1}</p>
+                    <p className="eyebrow">Полка {shelfIndex(fx, selected.sid).fromBottom}{tech ? ` · IR-ряд ${shelfIndex(fx, selected.sid).irRow}` : ''} · позиция {selected.i + 1}</p>
                     <h4>{selSku.name}</h4>
                     <p className="hint">{MAKERS[selSku.maker]} · {SEGMENTS[selSku.segment]}{selSku.price ? ` · ${selSku.price} ₸` : ''}</p>
                   </div>
@@ -393,8 +394,8 @@ function EditorView({ p }: { p: Planogram }) {
                   <dt>Ряд толкателя</dt><dd>{laneOf(fx, selShelf, selSku)} мм</dd>
                   <dt>Занимает</dt><dd>{laneOf(fx, selShelf, selSku) * selected.pl.facings} мм</dd>
                   <dt>Вглубь</dt><dd>{packsDeep(fx, selShelf, selSku)} пачек в ряду</dd>
-                  <dt>IR-метка</dt><dd className="mono">{selSku.label ?? '— нет в галерее'}</dd>
-                  <dt>Эталонов</dt><dd>{selSku.refs} {selSku.refs >= 3 ? <span className="chip chip-ok">готов</span> : selSku.refs ? <span className="chip chip-warn">мало</span> : <span className="chip chip-err">не узнает</span>}</dd>
+                  {tech && <><dt>IR-метка</dt><dd className="mono">{selSku.label ?? '— нет в галерее'}</dd>
+                  <dt>Эталонов</dt><dd>{selSku.refs} {selSku.refs >= 3 ? <span className="chip chip-ok">готов</span> : selSku.refs ? <span className="chip chip-warn">мало</span> : <span className="chip chip-err">не узнает</span>}</dd></>}
                 </dl>
                 <div className="row-actions">
                   <button className="btn btn-sm" onClick={() => shift(-1)} aria-label="Сдвинуть влево"><Icon name="arrowLeft" size={15} /></button>
@@ -411,7 +412,7 @@ function EditorView({ p }: { p: Planogram }) {
               </section>
             ) : selShelf ? (
               <section className="section">
-                <p className="eyebrow">Полка {shelfIndex(fx, selShelf.id).fromBottom} снизу · IR-ряд {shelfIndex(fx, selShelf.id).irRow}</p>
+                <p className="eyebrow">Полка {shelfIndex(fx, selShelf.id).fromBottom} снизу{tech ? ` · IR-ряд ${shelfIndex(fx, selShelf.id).irRow}` : ''}</p>
                 <h4 style={{ fontSize: 15 }}>{fx.name} {fx.code}</h4>
                 <dl className="kv">
                   <dt>Высота от пола</dt><dd>{Math.round(packFloor(fx, selShelf))} мм</dd>
@@ -420,7 +421,7 @@ function EditorView({ p }: { p: Planogram }) {
                   <dt>Фейсингов</dt><dd>{(p.rows[selShelf.id] ?? []).reduce((x, q) => x + q.facings, 0)}</dd>
                 </dl>
                 <label className="check"><input type="checkbox" checked={p.ir.skipShelves.includes(selShelf.id)}
-                  onChange={e => update(q => { q.ir.skipShelves = e.target.checked ? [...q.ir.skipShelves, selShelf.id] : q.ir.skipShelves.filter(x => x !== selShelf.id); })} />Не сверять эту полку в IR</label>
+                  onChange={e => update(q => { q.ir.skipShelves = e.target.checked ? [...q.ir.skipShelves, selShelf.id] : q.ir.skipShelves.filter(x => x !== selShelf.id); })} />Не проверять эту полку по фото</label>
                 <div className="row-actions">
                   <button className="btn btn-sm btn-danger" disabled={!(p.rows[selShelf.id] ?? []).length} onClick={() => update(q => { q.rows[selShelf.id] = []; })}><Icon name="trash" size={15} />Очистить полку</button>
                   {template && <a className="btn btn-sm" href={`#/fixture/${template.id}`}><Icon name="cabinet" size={15} />Шаблон шкафа</a>}
@@ -433,24 +434,7 @@ function EditorView({ p }: { p: Planogram }) {
 
             {tab === 'versions' && <VersionsPanel p={p} get={get} onRestore={next => { commit(next); notify(`Версия ${next.version}: раскладка восстановлена`); }} />}
 
-            {tab === 'ir' && (
-              <section className="section">
-                <div className="section-head"><h3>Профиль для align.py</h3>
-                  <div className="row-actions">
-                    <button className="btn btn-sm" onClick={() => { navigator.clipboard.writeText(yaml).then(() => notify('YAML скопирован'), () => notify('Не удалось скопировать: выделите текст вручную')); }}><Icon name="copy" size={15} />Копировать</button>
-                    <button className="btn btn-sm" onClick={() => download(`${irName(p)}.yaml`, yaml, 'text/yaml')}><Icon name="download" size={15} />Скачать</button>
-                  </div></div>
-                <p className="hint">{p.publishedAs ? <>Опубликована в IR как <code>{p.publishedAs}</code>: фото назначенных точек сверяются с ней сами. </> : null}Можно положить файл в <code>configs/planograms/&lt;client_id&gt;/&lt;outlet_id&gt;.yaml</code> или отправить фото в «Сверке IR»: Studio передаст профиль вместе с фото.</p>
-                <pre className="code-block">{yaml}</pre>
-                <h3>Стоимости выравнивания</h3>
-                <div className="grid3">
-                  {(Object.keys(p.ir.costs) as (keyof AlignCosts)[]).map(k => (
-                    <label key={k} className="field"><span className="mono">{k}</span>
-                      <input className="input mono" type="number" step="0.1" min="0" value={p.ir.costs[k]} onChange={e => update(q => { q.ir.costs[k] = Math.max(0, Number(e.target.value) || 0); })} /></label>
-                  ))}
-                </div>
-              </section>
-            )}
+            {tab === 'ir' && <PhotoCheck p={p} yaml={yaml} tech={tech} update={update} onCompare={() => go(`compare/${p.id}`)} />}
           </div>
         </aside>
       </div>
@@ -494,8 +478,8 @@ function Rules({ p, update, get, placed }: { p: Planogram; update: (fn: (q: Plan
         ))}
       </section>
       <section className="section">
-        <h3>Близнецы для IR</h3>
-        <p className="hint">Пары, которые IR путает. Studio предупредит, если они стоят рядом, а align.py засчитает подмену внутри пары как «на месте».</p>
+        <h3>Похожие пачки</h3>
+        <p className="hint">Пары, которые распознавание может перепутать. Если они поменялись местами, проверка по фото не считает это ошибкой, а редактор предупредит, если они стоят рядом.</p>
         {p.ir.twins.map(([x, y], i) => (
           <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 28px', gap: 6, alignItems: 'center', fontSize: 13 }}>
             <span>{get(x)?.name ?? x} ↔ {get(y)?.name ?? y}</span>
@@ -512,15 +496,16 @@ function Rules({ p, update, get, placed }: { p: Planogram; update: (fn: (q: Plan
   );
 }
 
-function Bottom({ p, a, onFix }: { p: Planogram; a: ReturnType<typeof analyse>; onFix: (i: Issue) => void }) {
-  const sev: Record<Issue['sev'], string> = { error: 'Ошибка', contract: 'Контракт', ir: 'IR', info: 'Заметка' };
+function Bottom({ p, a, tech, onFix }: { p: Planogram; a: Analysis; tech: boolean; onFix: (i: Issue) => void }) {
+  const sev: Record<Issue['sev'], string> = { error: 'Ошибка', contract: 'Контракт', ir: 'Фото', info: 'Заметка' };
   const must = p.rules.mustHave.filter(id => a.facings[id]).length;
+  const issues = visibleIssues(a, tech);
   return (
     <div className="bottom">
       <div className="stats">
         <div className="stat"><span className="l">Фейсингов</span><span className="v">{a.total}</span><span className="n">заполнение {pct(a.fill)}</span></div>
         <div className="stat"><span className="l">Обязательные</span><span className="v">{must}/{p.rules.mustHave.length}</span><span className="n">must-have</span></div>
-        <div className="stat"><span className="l">IR-готовность</span><span className="v">{a.ready}/{a.placed.length}</span><span className="n">SKU с 3+ эталонами</span></div>
+        {tech && <div className="stat"><span className="l">IR-готовность</span><span className="v">{a.ready}/{a.placed.length}</span><span className="n">SKU с 3+ эталонами</span></div>}
         <div className="stat wide">
           <span className="l">Доля полки по производителям · черта — цель контракта</span>
           {MAKER_ORDER.map(m => {
@@ -539,9 +524,9 @@ function Bottom({ p, a, onFix }: { p: Planogram; a: ReturnType<typeof analyse>; 
         </div>
       </div>
       <div className="issues">
-        <h3>Проверки <span className="count">{a.issues.length}</span></h3>
-        {!a.issues.length && <p className="ok-line">Нарушений нет. Можно отправлять на согласование.</p>}
-        {a.issues.slice(0, 60).map((i, k) => (
+        <h3>Проверки <span className="count">{issues.length}</span></h3>
+        {!issues.length && <p className="ok-line">Нарушений нет. Можно отправлять на согласование.</p>}
+        {issues.slice(0, 60).map((i, k) => (
           <div key={k} className={`issue sev-${i.sev}`}>
             <span className="sev">{sev[i.sev]}</span>
             <span>{i.text}</span>
@@ -550,6 +535,55 @@ function Bottom({ p, a, onFix }: { p: Planogram; a: ReturnType<typeof analyse>; 
         ))}
       </div>
     </div>
+  );
+}
+
+// Вкладка «Проверка»: что будет сверяться на фото точек. Файл для IR и стоимости — только инженеру
+function PhotoCheck({ p, yaml, tech, update, onCompare }: { p: Planogram; yaml: string; tech: boolean; update: (fn: (q: Planogram) => void) => void; onCompare: () => void }) {
+  const { notify } = useStore.getState();
+  const shelves = shelvesTopDown(p.fixture);
+  const outlets = p.assign.outlets.length;
+  return (
+    <>
+      <section className="section">
+        <h3>Проверка по фото</h3>
+        <p className="hint">Опубликованную планограмму назначают точкам. Каждое фото полки с этих точек сравнивается с ней: на месте ли пачки, нет ли пустот и чужих SKU. Итог — процент соответствия.</p>
+        <p>{p.publishedAs
+          ? <>Опубликована версия <b>{p.version}</b>{p.assign.clusters.length || outlets ? <>: кластеров {p.assign.clusters.length}, отдельных точек {outlets}.</> : '.'}</>
+          : <>Ещё не опубликована. Фото можно проверить вручную.</>}</p>
+        <button className="btn btn-sm btn-primary" onClick={onCompare}><Icon name="scan" size={15} />Проверить фото</button>
+      </section>
+      <section className="section">
+        <h3>Какие полки проверять</h3>
+        {shelves.map(sh => {
+          const n = shelfIndex(p.fixture, sh.id).fromBottom;
+          return (
+            <label key={sh.id} className="check"><input type="checkbox" checked={!p.ir.skipShelves.includes(sh.id)}
+              onChange={e => update(q => { q.ir.skipShelves = e.target.checked ? q.ir.skipShelves.filter(x => x !== sh.id) : [...q.ir.skipShelves, sh.id]; })} />
+              Полка {n}{(p.rows[sh.id] ?? []).length ? '' : ' · пустая'}</label>
+          );
+        })}
+        <p className="hint">Снимите отметку с полок, которые на фото обычно закрыты или не относятся к планограмме, например с лайтбокса.</p>
+      </section>
+      {tech && (
+        <details className="section tech">
+          <summary>Для инженера IR</summary>
+          <div className="row-actions">
+            <button className="btn btn-sm" onClick={() => { navigator.clipboard.writeText(yaml).then(() => notify('YAML скопирован'), () => notify('Не удалось скопировать: выделите текст вручную')); }}><Icon name="copy" size={15} />Копировать YAML</button>
+            <button className="btn btn-sm" onClick={() => download(`${irName(p)}.yaml`, yaml, 'text/yaml')}><Icon name="download" size={15} />Скачать</button>
+          </div>
+          {p.publishedAs && <p className="hint">В IR: <code>{p.publishedAs}</code></p>}
+          <pre className="code-block">{yaml}</pre>
+          <h3>Стоимости выравнивания</h3>
+          <div className="grid3">
+            {(Object.keys(p.ir.costs) as (keyof AlignCosts)[]).map(k => (
+              <label key={k} className="field"><span className="mono">{k}</span>
+                <input className="input mono" type="number" step="0.1" min="0" value={p.ir.costs[k]} onChange={e => update(q => { q.ir.costs[k] = Math.max(0, Number(e.target.value) || 0); })} /></label>
+            ))}
+          </div>
+        </details>
+      )}
+    </>
   );
 }
 

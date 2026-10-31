@@ -386,3 +386,22 @@ textarea.input { resize: vertical; min-height: 64px; line-height: 1.45; }
   .price-sheet { width: 100%; padding: 8mm; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---- Как пользоваться ---- */
+.help-link { gap: 6px; }
+.help-link.is-on { color: var(--accent); }
+.help { max-width: 920px; }
+.help-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.help-step { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 14px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.help-step h2 { font-size: 16px; margin: 4px 0 6px; }
+.help-step p { margin: 0 0 8px; color: var(--ink-2); line-height: 1.5; }
+.help-step .btn { margin-top: 4px; }
+.help-n { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; background: var(--accent-soft); color: var(--accent); }
+.help .panel h2 { font-size: 16px; margin: 0 0 8px; }
+.help .panel p { color: var(--ink-2); line-height: 1.5; margin: 0; }
+
+/* ---- раскрывашки: дополнительно и блок инженера ---- */
+details.advanced, details.tech { border-top: 1px solid var(--line); padding-top: 10px; }
+details.advanced > summary, details.tech > summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--ink-2); list-style-position: inside; }
+details.advanced[open] > summary, details.tech[open] > summary { margin-bottom: 10px; }
+details.advanced { display: grid; gap: 10px; }

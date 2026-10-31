@@ -33,7 +33,7 @@ export async function api<T>(c: ApiConfig, path: string, init: RequestInit = {})
   if (!res.ok) {
     const detail = body && typeof body === 'object' && 'detail' in body ? (body as { detail: unknown }).detail : text;
     const msg = res.status === 401 || res.status === 403
-      ? 'ключ API не подошёл. Введите ключ из SALESBOX_API_KEYS'
+      ? 'нет доступа: войдите заново'
       : `сервис ответил ${res.status}: ${typeof detail === 'string' ? detail.slice(0, 200) : JSON.stringify(detail).slice(0, 200)}`;
     throw new ApiError(res.status, msg, body);
   }

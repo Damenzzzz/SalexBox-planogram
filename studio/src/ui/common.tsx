@@ -39,6 +39,7 @@ const PATHS: Record<string, string> = {
   layers: 'm12 4 8 4-8 4-8-4 8-4zM4 12l8 4 8-4M4 16l8 4 8-4',
   more: 'M6 12h.01M12 12h.01M18 12h.01',
   image: 'M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5M15.5 9.5h.01',
+  help: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.7M12 17h.01',
 };
 export function Icon({ name, size = 18 }: { name: keyof typeof PATHS | string; size?: number }) {
   return (

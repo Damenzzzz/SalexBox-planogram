@@ -9,7 +9,7 @@ import type { IrPlanogramReport, IrRun, IrSlot, Planogram, SlotStatus, Sku } fro
 import { nextVersion } from '../domain/versions';
 import { XLSX_TYPE, downloadBytes, xlsx } from '../domain/xlsx';
 import { STATUS_TOKEN } from '../render/scene';
-import { go, useCatalog, useStore } from '../store';
+import { go, useCatalog, useStore, useTech } from '../store';
 import { Icon, Stage, pct } from './common';
 import { ServerModal } from './Server';
 
@@ -49,6 +49,7 @@ export function Compare({ planogramId }: { planogramId: string | null }) {
 function CompareView({ p }: { p: Planogram }) {
   const { get, list } = useCatalog();
   const settings = useStore(s => s.settings);
+  const tech = useTech();
   const allRuns = useStore(s => s.runs);
   const runs = useMemo(() => allRuns.filter(r => r.planogramId === p.id), [allRuns, p.id]);
   const { addRun, updateRun, deleteRun, savePlanogram, saveSnapshot, notify } = useStore.getState();
@@ -82,7 +83,7 @@ function CompareView({ p }: { p: Planogram }) {
     try {
       const { photoId, result } = await analyzePhoto(settings, file, { planogram: toIrYaml(p, get), outlet_id: outlet.trim() }, setBusy);
       const report = result.planogram as IrPlanogramReport | undefined;
-      if (!report) throw new Error('в ответе нет сверки. Сервис должен принимать поле planogram (ветка islambek/planogram-studio в SalesBox)');
+      if (!report) throw new Error('сервер распознал фото, но не вернул сверку с планограммой');
       save(report, 'api', file.name, photoId, modelsOf(result.models), url, size);
       notify(`Сверка готова: соответствие ${pct(report.compliance)}`);
     } catch (e) {
@@ -160,7 +161,7 @@ function CompareView({ p }: { p: Planogram }) {
             <input ref={jsonInput} type="file" accept=".json" hidden onChange={e => { const f = e.target.files?.[0]; if (f) loadJson(f); e.target.value = ''; }} />
             {busy && <p className="hint" role="status">{busy}</p>}
             <label className="field"><span>Точка (outlet_id)</span><input className="input" value={outlet} placeholder="необязательно" onChange={e => setOutlet(e.target.value)} /></label>
-            <button className="btn btn-sm btn-ghost" style={{ justifySelf: 'start' }} onClick={() => setServer(true)}><Icon name="cloud" size={15} />Подключение к IR-сервису{settings.apiBase ? ` · ${settings.apiBase}` : ''}</button>
+            <button className="btn btn-sm btn-ghost" style={{ justifySelf: 'start' }} onClick={() => setServer(true)}><Icon name="cloud" size={15} />Подключение к серверу</button>
             {server && <ServerModal onClose={() => setServer(false)} />}
             <button className="btn btn-sm" onClick={() => { const r = simulate(p, get); save(r, 'file', 'пример без фото', null, 'симуляция в Studio', null, null); notify('Пример сверки создан: статусы условные'); }}>Пример сверки без сервиса</button>
           </section>
@@ -169,7 +170,7 @@ function CompareView({ p }: { p: Planogram }) {
             <section className="section">
               <div className="section-head"><h3>Память сверок · {runs.length}</h3>
                 <button className="btn btn-sm" onClick={() => downloadBytes(`${irName(p)}-сверки.xlsx`, xlsx([runsSheet(p, runs, get)]), XLSX_TYPE)}><Icon name="download" size={15} />Excel</button></div>
-              <MemorySummary runs={runs} get={get} />
+              {tech && <MemorySummary runs={runs} get={get} />}
               <div className="runs">
                 {runs.map(r => {
                   const st = runStats(r);
@@ -197,7 +198,7 @@ function CompareView({ p }: { p: Planogram }) {
               </div>
               {!matched && <p className="chip chip-warn" style={{ whiteSpace: 'normal', lineHeight: 1.4, padding: '6px 9px' }}>IR не сопоставил ни один ряд фото с полками этой планограммы. Скорее всего, на фото другой шкаф или видна только его часть: все пачки ушли в «сверх плана».</p>}
               {matched > 0 && unmatched > 0 && <p className="hint">{unmatched} ряд(а) фото без пары в планограмме: их пачки — «сверх плана».</p>}
-              <p className="hint">Проверено {stats.verified} из {stats.slots} слотов. Enter — IR прав, X — ошибся, стрелки — следующий слот. {run.models && `Модели: ${run.models}.`}</p>
+              <p className="hint">Проверено {stats.verified} из {stats.slots} слотов. Enter — IR прав, X — ошибся, стрелки — следующий слот. {tech && run.models && `Модели: ${run.models}.`}</p>
               <div className="row-actions">
                 <button className="btn btn-sm" onClick={() => {
                   const { next, snapshot } = nextVersion(p, `по фото ${run.photoName}`);
@@ -205,10 +206,10 @@ function CompareView({ p }: { p: Planogram }) {
                   savePlanogram({ ...next, rows: rowsFromRun(next, run) });
                   notify(`Версия ${next.version} по фото: v${p.version} сохранена в «Версиях»`); go(`planogram/${p.id}`);
                 }}><Icon name="edit" size={15} />Новая версия по фото</button>
-                <button className="btn btn-sm" disabled={!photos.get(run.id) || !galleryCrops(run).length}
+                {tech && <button className="btn btn-sm" disabled={!photos.get(run.id) || !galleryCrops(run).length}
                   title={!photos.get(run.id) ? 'Фото этой сверки не сохранено: кропы режутся из оригинала текущей сессии' : 'Подтверждённые слоты: папки «бренд/модель» для salesbox-gallery'}
                   onClick={() => exportCrops(run, photos.get(run.id)!).then(n => notify(`Эталонов в архиве: ${n}. Передайте его в галерею (salesbox-gallery)`), e => notify(`Не вышло: ${(e as Error).message}`))}>
-                  <Icon name="image" size={15} />Эталоны в галерею · {galleryCrops(run).length}</button>
+                  <Icon name="image" size={15} />Эталоны в галерею · {galleryCrops(run).length}</button>}
               </div>
             </section>
           )}
@@ -262,7 +263,7 @@ function CompareView({ p }: { p: Planogram }) {
                     </select></label>
                 </div>
               )}
-              {run.verdicts[sel.key]?.v === 'wrong' && <p className="hint">Пачка нужна для пар-путаниц и для эталонов галереи: кроп уйдёт под правильной меткой.</p>}
+              {tech && run.verdicts[sel.key]?.v === 'wrong' && <p className="hint">Пачка нужна для пар-путаниц и для эталонов галереи: кроп уйдёт под правильной меткой.</p>}
             </section>
           )}
         </div>
@@ -300,7 +301,7 @@ function MemorySummary({ runs, get }: { runs: IrRun[]; get: (id: string) => Sku 
           ))}</tbody>
         </table>
       )}
-      {m.confusions.length > 0 && <p className="hint">Путает: {m.confusions.slice(0, 4).map(([k, n]) => `${k.split(' ↔ ').map(x => name(get, x)).join(' → ')} (${n})`).join('; ')}. Такие пары стоит добавить в «Близнецы» или дать им эталоны.</p>}
+      {m.confusions.length > 0 && <p className="hint">Путает: {m.confusions.slice(0, 4).map(([k, n]) => `${k.split(' ↔ ').map(x => name(get, x)).join(' → ')} (${n})`).join('; ')}. Такие пары стоит добавить в «Похожие пачки» или дать им эталоны.</p>}
     </>
   );
 }

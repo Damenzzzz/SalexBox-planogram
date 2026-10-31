@@ -2,7 +2,6 @@ import gallery from '../data/gallery.json';
 import { FORMATS, formatFromLabel, makerOf, segmentOf } from './formats';
 import type { Look, LookFont, LookKind, Sku, SkuPatch } from './types';
 
-export const GALLERY_META = { source: gallery.source, snapshot: gallery.snapshot, embedder: gallery.embedder };
 
 // Цвета по словам в названии модели. Порядок важен: первое совпадение задаёт фон.
 const COLOR_WORDS: [RegExp, string][] = [

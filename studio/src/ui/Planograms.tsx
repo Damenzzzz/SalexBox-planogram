@@ -7,7 +7,7 @@ import { download, importText, toBundle } from '../domain/io';
 import { capacity, sortedShelves } from '../domain/geometry';
 import { newPlanogram } from '../domain/templates';
 import type { Market, Planogram, PlanogramStatus } from '../domain/types';
-import { go, useCatalog, useStore } from '../store';
+import { go, useCatalog, useStore, useTech } from '../store';
 import { Icon, Modal, SceneThumb, pct } from './common';
 
 export const STATUS_NAME: Record<PlanogramStatus, string> = { draft: 'Черновик', review: 'На согласовании', approved: 'Утверждена', published: 'Опубликована' };
@@ -18,8 +18,8 @@ export function Planograms() {
   const fixtures = useStore(s => s.fixtures);
   const runs = useStore(s => s.runs);
   const custom = useStore(s => s.custom);
-  const sync = useStore(s => s.settings.sync);
-  const { list, byId, get } = useCatalog();
+  const tech = useTech();
+  const { byId, get } = useCatalog();
   const { savePlanogram, deletePlanogram, duplicatePlanogram, applyImport, notify } = useStore.getState();
   const [creating, setCreating] = useState(false);
   const [drafting, setDrafting] = useState(false);
@@ -77,7 +77,7 @@ export function Planograms() {
                 </div>
                 <div className="meta">
                   {errors ? <span className="chip chip-err">{errors} ошиб.</span> : <span className="chip chip-ok">проверки ок</span>}
-                  <span>IR-готовность <b>{a.ready}/{a.placed.length}</b></span>
+                  {tech && <span>IR-готовность <b>{a.ready}/{a.placed.length}</b></span>}
                   {last && <span>сверка <b>{pct(runStats(last).truthCompliance ?? runStats(last).irCompliance)}</b></span>}
                 </div>
                 <div className="lib-actions">
@@ -98,7 +98,6 @@ export function Planograms() {
       {creating && (
         <NewPlanogram onClose={() => setCreating(false)} onCreate={p => { savePlanogram(p); setCreating(false); go(`planogram/${p.id}`); }} />
       )}
-      <p className="hint">Каталог: {list.length} SKU из галереи recognition_ref. {sync ? 'Данные хранятся в IR-сервисе и в этом браузере.' : 'Всё хранится в этом браузере; включите «Хранить на сервере» в шапке или обменивайтесь через «Выгрузить всё» и «Импорт».'}</p>
     </div>
   );
 }
@@ -183,7 +182,7 @@ function DraftModal({ onClose, onCreate }: { onClose: () => void; onCreate: (p: 
       <button className="btn" onClick={onClose}>Отмена</button>
       <button className="btn btn-primary" disabled={!fx || !!busy} onClick={() => input.current?.click()}><Icon name="camera" size={15} />Выбрать фото или JSON</button>
     </>}>
-      <p className="hint">Фото выкладки в точке или картинка планограммы от клиента. IR найдёт ряды главного стеллажа и узнает пачки, Studio поставит их на выбранный шкаф: полок столько же, сколько рядов на фото. Неузнанные пачки остаются пустыми местами. Можно загрузить и JSON результата IR.</p>
+      <p className="hint">Фото выкладки в точке или картинка планограммы от клиента. Распознавание найдёт ряды и пачки, а Studio поставит их на выбранный шкаф: полок будет столько же, сколько рядов на фото. Неузнанные пачки останутся пустыми местами.</p>
       <label className="field"><span>Название</span><input className="input" value={name} onChange={e => setName(e.target.value)} /></label>
       <div className="field"><span>Шкаф</span>
         <select className="select" value={tpl} onChange={e => setTpl(e.target.value)}>

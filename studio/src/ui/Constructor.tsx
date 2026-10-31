@@ -6,7 +6,7 @@ import {
 import { newPlanogram } from '../domain/templates';
 import type { Doors, FormatId, Fixture, LaneMode, Material } from '../domain/types';
 import { MARGIN } from '../render/scene';
-import { go, useStore } from '../store';
+import { go, useStore, useTech } from '../store';
 import { Icon, NumField, Seg, Stage, useHistory, type StageHandle } from './common';
 import { DOORS, MATERIALS } from './Fixtures';
 
@@ -26,6 +26,7 @@ type Drag = { kind: 'shelf'; id: string } | { kind: 'w' | 'h'; startX: number; s
 function ConstructorView({ fx }: { fx: Fixture }) {
   const fixtures = useStore(s => s.fixtures);
   const used = useStore(s => s.planograms.filter(p => p.templateId === fx.id).length);
+  const tech = useTech();
   const { saveFixture, duplicateFixture, savePlanogram, notify } = useStore.getState();
   const baseVersion = useRef(fx.version);
   const stage = useRef<StageHandle>(null);
@@ -232,7 +233,7 @@ function ConstructorView({ fx }: { fx: Fixture }) {
                 <button className="btn btn-sm" onClick={() => update(f => { f.shelves = evenShelves(f, f.shelves.length); })}><Icon name="spread" size={15} />Развести равномерно</button>
               </div>
               <table className="shelf-table">
-                <thead><tr><th>№</th><th>IR</th><th>От пола</th><th>Просвет</th><th>Ряд</th><th /></tr></thead>
+                <thead><tr><th>№</th>{tech && <th>IR</th>}<th>От пола</th><th>Просвет</th><th>Ряд</th><th /></tr></thead>
                 <tbody>
                   {top.map(sh => {
                     const { fromBottom, irRow } = shelfIndex(shown, sh.id);
@@ -240,7 +241,7 @@ function ConstructorView({ fx }: { fx: Fixture }) {
                     return (
                       <tr key={sh.id} className={sh.id === sel ? 'sel' : ''} onClick={() => setSel(sh.id)}>
                         <td className="n">{fromBottom}</td>
-                        <td className="n" style={{ color: 'var(--ir)' }}>{irRow}</td>
+                        {tech && <td className="n" style={{ color: 'var(--ir)' }}>{irRow}</td>}
                         <td style={{ width: 84 }}><NumField compact label={`Высота полки ${fromBottom} от пола`} value={sh.y} unit="" onChange={v => update(f => { const s = f.shelves.find(q => q.id === sh.id)!; s.y = clampShelfY(fx, sh.id, v!); })} /></td>
                         <td className={cl < FORMATS.SS.h ? 'bad mono' : 'mono'}>{cl}</td>
                         <td style={{ width: 72 }}><NumField compact label={`Ширина ряда на полке ${fromBottom}`} value={sh.lane} unit="" allowNull placeholder="авто" step={1} min={30} max={150} onChange={v => update(f => { f.shelves.find(q => q.id === sh.id)!.lane = v; })} /></td>
@@ -250,7 +251,7 @@ function ConstructorView({ fx }: { fx: Fixture }) {
                   })}
                 </tbody>
               </table>
-              <p className="hint">№ — счёт снизу, как у мерчандайзера. IR — номер ряда сверху, так его ждёт align.py.</p>
+              <p className="hint">№ — счёт полок снизу, как у мерчандайзера.{tech ? ' IR — номер ряда сверху, так считает распознавание.' : ''}</p>
             </section>
 
             {selShelf && (
