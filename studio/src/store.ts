@@ -1,7 +1,7 @@
 import { useMemo, useSyncExternalStore } from 'react';
 import { create } from 'zustand';
 import { buildCatalog } from './domain/catalog';
-import { applyRemote, markSeed, resetSyncMeta, syncOnce } from './domain/sync';
+import { applyRemote, markSeed, resetSyncMeta, syncOnce, type Lost } from './domain/sync';
 import { connectGallery, setGalleryListener } from './render/gallery';
 import { clearTextures, clearThumbs, setPhotos } from './render/textures';
 import { autoCode, uid } from './domain/geometry';
@@ -28,6 +28,7 @@ export interface Data {
   patches: Record<string, SkuPatch>;
   custom: Sku[];
   runs: IrRun[];
+  lost: Lost[];                // свои правки, уступившие серверу при синхронизации: только в этом браузере
   settings: Settings;
 }
 
@@ -57,12 +58,14 @@ interface State extends Data {
   saveSnapshot: (s: Snapshot) => void;
   saveCluster: (c: Cluster) => void;
   deleteCluster: (id: string) => void;
+  restoreLost: (i: number) => void;
+  dismissLost: (i: number) => void;
 }
 
 const now = () => new Date().toISOString();
 const MAX_RUNS = 500;   // сверок в браузере: в IndexedDB места хватает, старые остаются на сервере
 
-const EMPTY: Data = { fixtures: [], planograms: [], snapshots: [], clusters: [], patches: {}, custom: [], runs: [], settings: { ...DEFAULT_SETTINGS } };
+const EMPTY: Data = { fixtures: [], planograms: [], snapshots: [], clusters: [], patches: {}, custom: [], runs: [], lost: [], settings: { ...DEFAULT_SETTINGS } };
 
 // Сохранённые данные → состояние; пусто или битое — примеры для первого запуска
 function normalize(raw: unknown): Data {
@@ -70,7 +73,7 @@ function normalize(raw: unknown): Data {
   if (Array.isArray(d.fixtures) && Array.isArray(d.planograms)) {
     return {
       fixtures: d.fixtures, planograms: d.planograms.map(normalizePlanogram), snapshots: d.snapshots ?? [], clusters: d.clusters ?? [],
-      patches: d.patches ?? {}, custom: d.custom ?? [], runs: d.runs ?? [], settings: { ...DEFAULT_SETTINGS, ...(d.settings ?? {}) },
+      patches: d.patches ?? {}, custom: d.custom ?? [], runs: d.runs ?? [], lost: d.lost ?? [], settings: { ...DEFAULT_SETTINGS, ...(d.settings ?? {}) },
     };
   }
   const fixtures = seedFixtures();
@@ -161,6 +164,13 @@ export const useStore = create<State>((set, get) => ({
     clusters: s.clusters.filter(c => c.id !== id),
     planograms: s.planograms.map(p => (p.assign.clusters.includes(id) ? { ...p, assign: { ...p.assign, clusters: p.assign.clusters.filter(x => x !== id) } } : p)),
   })),
+  // Вернуть свою правку: она станет текущей и уйдёт на сервер следующим проходом поверх серверной
+  restoreLost: i => set(s => {
+    const it = s.lost[i];
+    if (!it) return {};
+    return { ...applyRemote(s, [{ kind: it.kind, id: it.id, body: it.body, deleted: false }]), lost: s.lost.filter((_, k) => k !== i) };
+  }),
+  dismissLost: i => set(s => ({ lost: s.lost.filter((_, k) => k !== i) })),
 }));
 
 // Снимок версии один на номер версии: повторное согласование той же версии его обновляет
@@ -173,7 +183,7 @@ export function keepSnapshot(p: Planogram, note: string) {
 
 export const dataOf = (s: Data): Data => ({
   fixtures: s.fixtures, planograms: s.planograms, snapshots: s.snapshots, clusters: s.clusters,
-  patches: s.patches, custom: s.custom, runs: s.runs, settings: s.settings,
+  patches: s.patches, custom: s.custom, runs: s.runs, lost: s.lost, settings: s.settings,
 });
 
 // Сохранение в браузере с задержкой: правки на холсте идут пачками. До загрузки не пишем,
@@ -211,11 +221,11 @@ export async function runSync() {
     const r = await syncOnce(s.settings, () => useStore.getState());
     useStore.setState(st => {
       const d = applyRemote(st, [...r.applied, ...r.dropped.map(x => ({ ...x, body: null, deleted: true }))]);
-      return { ...d, planograms: [...r.copies, ...d.planograms], sync: { status: 'idle', at: now(), error: null } };
+      return { ...d, planograms: [...r.copies, ...d.planograms], lost: [...r.lost, ...st.lost].slice(0, 100), sync: { status: 'idle', at: now(), error: null } };
     });
     if (r.conflicts.length) {
-      const n = r.copies.length;
-      s.notify(`На сервере правили те же документы (${r.conflicts.length}): взята серверная версия${n ? `, ваши правки сохранены копией (${n})` : ''}`);
+      const parts = [r.copies.length && `планограммы сохранены копией (${r.copies.length})`, r.lost.length && `остальное — в «Подключении», можно вернуть (${r.lost.length})`].filter(Boolean);
+      s.notify(`На сервере правили те же документы (${r.conflicts.length}): взята серверная версия${parts.length ? `; ваши правки: ${parts.join(', ')}` : ', подтверждения сверок объединены'}`);
     }
   } catch (e) {
     useStore.setState({ sync: { status: 'error', at: now(), error: (e as Error).message } });

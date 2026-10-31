@@ -1,7 +1,8 @@
 // Хранение Studio в IR-сервисе: документы целиком, синхронизация по seq, запись поверх rev.
 // Браузер остаётся рабочей копией: без сети всё работает, при связи изменения уходят и приходят.
-// Конфликт (правили и тут, и на сервере): берём серверную версию, а свою планограмму
-// сохраняем копией — правки человека не пропадают молча.
+// Конфликт (правили и тут, и на сервере): берём серверную версию, а своя правка не пропадает.
+// Планограмма сохраняется копией, у сверки подтверждения слотов объединяются, остальное
+// (шкафы, кластеры, каталог, версии) уходит в список «уступили серверу», откуда её можно вернуть.
 
 import { ApiError, api, docPath, jsonBody, type ApiConfig } from './api';
 import { uid } from './geometry';
@@ -23,6 +24,25 @@ export interface Docs {
 interface Doc { kind: DocKind; id: string; body: unknown; src: unknown[] }
 
 export interface RemoteDoc { kind: DocKind; id: string; rev: number; seq: number; updated_at: string; deleted: boolean; body: unknown }
+
+// Своя правка, уступившая серверу: можно вернуть её или отказаться
+export interface Lost { kind: DocKind; id: string; title: string; body: unknown; at: string }
+
+const KIND_RU: Record<DocKind, string> = { fixture: 'Шкаф', planogram: 'Планограмма', version: 'Версия', sku: 'SKU', run: 'Сверка', cluster: 'Кластер' };
+export function lostTitle(kind: DocKind, id: string, body: unknown): string {
+  const b = (body ?? {}) as Record<string, unknown>;
+  const name = kind === 'fixture' ? `${b.code ?? ''} ${b.name ?? ''}`.trim()
+    : kind === 'cluster' ? b.name
+    : kind === 'version' ? `v${b.version}`
+    : kind === 'sku' ? ((b.custom as Sku | undefined)?.name ?? id.split('/').pop())
+    : id;
+  return `${KIND_RU[kind]} ${name || id}`;
+}
+
+// Подтверждения слотов с двух сторон: свои поверх серверных, ни одно не теряется
+function mergeRun(remote: IrRun, mine: IrRun): IrRun {
+  return { ...remote, verdicts: { ...remote.verdicts, ...mine.verdicts } };
+}
 
 interface Meta { base: string; seq: number; revs: Record<string, number>; hashes: Record<string, string> }
 
@@ -121,6 +141,7 @@ function takeSeed(): Record<string, string> {
 export interface SyncResult {
   applied: RemoteDoc[];      // документы сервера: применить к текущим данным (их могли поменять за время прохода)
   copies: Planogram[];       // свои правки планограмм, проигравшие конфликт, — отдельными планограммами
+  lost: Lost[];              // остальные свои правки, уступившие серверу
   dropped: { kind: DocKind; id: string }[];   // нетронутые примеры этого браузера: на сервере уже есть данные
   pulled: number; pushed: number; conflicts: string[];
 }
@@ -131,6 +152,8 @@ export async function syncOnce(cfg: ApiConfig, read: () => Docs): Promise<SyncRe
   const conflicts: string[] = [];
   const applied: RemoteDoc[] = [];
   const allCopies: Planogram[] = [];
+  const lost: Lost[] = [];
+  const merged = new Set<string>();   // объединённые сверки: уйдут на сервер этим же проходом
   let data: Docs | null = null;
   const cur = () => data ?? read();
 
@@ -151,6 +174,12 @@ export async function syncOnce(cfg: ApiConfig, read: () => Docs): Promise<SyncRe
         if (d.kind === 'planogram') {
           const p = mine.body as Planogram;
           copies.push({ ...structuredClone(p), id: uid('plg'), name: `${p.name} (ваша правка)`, publishedAs: null, assign: { clusters: [], outlets: [] } });
+        } else if (d.kind === 'run' && !d.deleted) {
+          apply.push({ ...d, body: mergeRun(d.body as IrRun, mine.body as IrRun) });
+          merged.add(k);
+          continue;
+        } else {
+          lost.push({ kind: d.kind, id: d.id, title: lostTitle(d.kind, d.id, mine.body), body: structuredClone(mine.body), at: new Date().toISOString() });
         }
       }
       apply.push(d);
@@ -167,7 +196,7 @@ export async function syncOnce(cfg: ApiConfig, read: () => Docs): Promise<SyncRe
       if (d.deleted) { delete meta.revs[k]; delete meta.hashes[k]; continue; }
       meta.revs[k] = d.rev;
       const doc = after.get(k);
-      meta.hashes[k] = doc ? hashDoc(doc) : '';
+      meta.hashes[k] = doc && !merged.has(k) ? hashDoc(doc) : '';   // пустой хэш — отправить объединённую
     }
   };
 
@@ -224,5 +253,5 @@ export async function syncOnce(cfg: ApiConfig, read: () => Docs): Promise<SyncRe
     delete meta.revs[k]; delete meta.hashes[k];
   }
   saveMeta(meta);
-  return { applied, copies: allCopies, dropped, pulled: pulled.items.length, pushed, conflicts };
+  return { applied, copies: allCopies, lost, dropped, pulled: pulled.items.length, pushed, conflicts };
 }
