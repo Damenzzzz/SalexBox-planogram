@@ -1,7 +1,7 @@
 // Фото эталонов галереи из IR-сервиса (GET /v1/gallery/image) — текстуры пачек вместо нарисованных.
 // Картинки грузятся по требованию; когда догрузилась новая, слушатель перерисовывает холсты.
 
-import { api, apiHeaders, apiUrl, type ApiConfig } from '../domain/api';
+import { api, apiUrl, type ApiConfig } from '../domain/api';
 
 let cfg: ApiConfig | null = null;
 let labels: Set<string> | null = null;
@@ -31,7 +31,7 @@ export function galleryImage(label: string | null): HTMLImageElement | null {
   if (got) return null;
   images.set(label, 'loading');
   const c = cfg;
-  fetch(apiUrl(c, `/v1/gallery/image?label=${encodeURIComponent(label)}`), { headers: apiHeaders(c) })
+  fetch(apiUrl(c, `/v1/gallery/image?label=${encodeURIComponent(label)}`), { credentials: 'same-origin' })
     .then(r => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status)))))
     .then(b => new Promise<HTMLImageElement>((res, rej) => {
       const img = new Image();

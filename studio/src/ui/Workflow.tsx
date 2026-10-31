@@ -6,7 +6,7 @@ import { irName, toIrYaml } from '../domain/irExport';
 import { autoLayout, fitToFixture } from '../domain/layout';
 import type { Planogram, Sku, Snapshot } from '../domain/types';
 import { ACTION_RU, diffPlanograms, restoreFrom, withEntry, type Change } from '../domain/versions';
-import { go, keepSnapshot, useStore } from '../store';
+import { go, keepSnapshot, useCanApprove, useStore } from '../store';
 import { Icon, Modal, SceneThumb } from './common';
 import { STATUS_NAME } from './Planograms';
 
@@ -20,6 +20,8 @@ const fmt = (iso: string) => new Date(iso).toLocaleString('ru-RU', { dateStyle: 
 export function WorkflowBar({ p, get }: { p: Planogram; get: Get }) {
   const [modal, setModal] = useState<null | 'review' | 'approve' | 'return' | 'publish'>(null);
   const { savePlanogram, notify } = useStore.getState();
+  const canApprove = useCanApprove();
+  const lock = canApprove ? undefined : 'Утверждает и публикует руководитель';
   const act = (action: 'review' | 'approved' | 'returned', note: string) => {
     const status = action === 'review' ? 'review' : action === 'approved' ? 'approved' : 'draft';
     const next = withEntry(p, action, note, status);
@@ -34,11 +36,11 @@ export function WorkflowBar({ p, get }: { p: Planogram; get: Get }) {
       <span className="chip">версия {p.version}</span>
       {p.status === 'draft' && <button className="btn btn-sm" onClick={() => setModal('review')}><Icon name="send" size={15} />На согласование</button>}
       {p.status === 'review' && <>
-        <button className="btn btn-sm btn-primary" onClick={() => setModal('approve')}><Icon name="check" size={15} />Утвердить</button>
-        <button className="btn btn-sm" onClick={() => setModal('return')}>Вернуть</button>
+        <button className="btn btn-sm btn-primary" disabled={!canApprove} title={lock} onClick={() => setModal('approve')}><Icon name="check" size={15} />Утвердить</button>
+        <button className="btn btn-sm" disabled={!canApprove} title={lock} onClick={() => setModal('return')}>Вернуть</button>
       </>}
-      {p.status === 'approved' && <button className="btn btn-sm btn-primary" onClick={() => setModal('publish')}><Icon name="cloud" size={15} />Опубликовать</button>}
-      {p.status === 'published' && <button className="btn btn-sm" onClick={() => setModal('publish')} title={p.publishedAs ?? ''}><Icon name="pin" size={15} />Точки · {p.assign.outlets.length + p.assign.clusters.length ? 'назначены' : 'нет'}</button>}
+      {p.status === 'approved' && <button className="btn btn-sm btn-primary" disabled={!canApprove} title={lock} onClick={() => setModal('publish')}><Icon name="cloud" size={15} />Опубликовать</button>}
+      {p.status === 'published' && <button className="btn btn-sm" disabled={!canApprove} onClick={() => setModal('publish')} title={lock ?? (p.publishedAs ?? '')}><Icon name="pin" size={15} />Точки · {p.assign.outlets.length + p.assign.clusters.length ? 'назначены' : 'нет'}</button>}
       {(modal === 'review' || modal === 'approve' || modal === 'return') && (
         <NoteModal p={p} get={get} kind={modal} onClose={() => setModal(null)}
           onDone={note => act(modal === 'review' ? 'review' : modal === 'approve' ? 'approved' : 'returned', note)} />
@@ -75,7 +77,7 @@ function NoteModal({ p, get, kind, onClose, onDone }: { p: Planogram; get: Get; 
 const parseOutlets = (s: string) => [...new Set(s.split(/[\s,;]+/).map(x => x.trim()).filter(Boolean))];
 
 function PublishModal({ p, get, onClose }: { p: Planogram; get: Get; onClose: () => void }) {
-  const settings = useStore(s => s.settings);
+  const me = useStore(s => s.me);
   const clusters = useStore(s => s.clusters);
   const { savePlanogram, notify } = useStore.getState();
   const [chosen, setChosen] = useState<string[]>(p.assign.clusters);
@@ -93,15 +95,15 @@ function PublishModal({ p, get, onClose }: { p: Planogram; get: Get; onClose: ()
     setError(null);
     try {
       setBusy('Публикую версию…');
-      await api(settings, `/v1/planograms/${encodeURIComponent(name)}`, {
+      await api({}, `/v1/planograms/${encodeURIComponent(name)}`, {
         method: 'PUT', body: jsonBody({ yaml: toIrYaml(p, get), planogram_id: p.id, version: p.version, title: p.name }),
       });
       setBusy('Назначаю точки…');
-      if (outlets.length) await api(settings, '/v1/assignments', { method: 'PUT', body: jsonBody({ planogram: name, outlets }) });
+      if (outlets.length) await api({}, '/v1/assignments', { method: 'PUT', body: jsonBody({ planogram: name, outlets }) });
       // точки, которые убрали из списка, больше не сверяются с этой версией
-      const had = await api<{ items: { outlet_id: string }[] }>(settings, `/v1/assignments?planogram=${encodeURIComponent(name)}`);
+      const had = await api<{ items: { outlet_id: string }[] }>({}, `/v1/assignments?planogram=${encodeURIComponent(name)}`);
       const drop = had.items.map(a => a.outlet_id).filter(o => !outlets.includes(o));
-      for (const o of drop) await api(settings, `/v1/assignments/${encodeURIComponent(o)}`, { method: 'DELETE' });
+      for (const o of drop) await api({}, `/v1/assignments/${encodeURIComponent(o)}`, { method: 'DELETE' });
       const first = p.status !== 'published';
       const next = withEntry({ ...p, status: 'published', publishedAs: name, assign: { clusters: chosen, outlets: parseOutlets(extra) } },
         'published', `${name}: ${outlets.length} точек${drop.length ? `, снято с ${drop.length}` : ''}`);
@@ -118,9 +120,10 @@ function PublishModal({ p, get, onClose }: { p: Planogram; get: Get; onClose: ()
   return (
     <Modal title={p.status === 'published' ? 'Точки опубликованной версии' : 'Опубликовать в IR'} onClose={onClose} footer={<>
       <button className="btn" onClick={onClose}>Отмена</button>
-      <button className="btn btn-primary" disabled={!!busy} onClick={publish}><Icon name="cloud" size={15} />{p.status === 'published' ? 'Сохранить точки' : 'Опубликовать'}</button>
+      <button className="btn btn-primary" disabled={!!busy || !me} onClick={publish}><Icon name="cloud" size={15} />{p.status === 'published' ? 'Сохранить точки' : 'Опубликовать'}</button>
     </>}>
-      <p>Версия <b>{p.version}</b> уйдёт в IR под именем <code>{name}</code>. Опубликованную версию нельзя изменить: правка начнёт следующую.</p>
+      {!me && <p className="chip chip-warn" style={{ whiteSpace: 'normal', lineHeight: 1.4, padding: '6px 9px' }}>Публикация идёт на сервер: сначала войдите (кнопка «Войти» в шапке).</p>}
+      <p>Версия <b>{p.version}</b> уйдёт на проверку фото{me ? <> клиента <b>{me.client}</b></> : null}. Опубликованную версию нельзя изменить: правка начнёт следующую.</p>
       <div className="field"><span>Кластеры точек</span>
         {clusters.length ? (
           <div className="check-list">
@@ -165,7 +168,7 @@ export function VersionsPanel({ p, get, onRestore }: { p: Planogram; get: Get; o
         <h3>История</h3>
         <ol className="journal">
           {[...p.journal].reverse().map((j, i) => (
-            <li key={i}><b>{ACTION_RU[j.action]}</b> · v{j.version}<span className="hint"> · {fmt(j.at)}</span>{j.note && <p>{j.note}</p>}</li>
+            <li key={i}><b>{ACTION_RU[j.action]}</b> · v{j.version}<span className="hint"> · {fmt(j.at)}{j.by ? ` · ${j.by}` : ''}</span>{j.note && <p>{j.note}</p>}</li>
           ))}
         </ol>
       </section>

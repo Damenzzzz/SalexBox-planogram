@@ -1,6 +1,13 @@
-// Клиент IR-сервиса SalesBox: те же адрес и ключ для сверки, хранения Studio и публикации
+// Клиент сервера Studio (IR-сервис SalesBox): сверка фото, хранение, публикация.
+// Доступ — сессия после входа: HttpOnly-кука, которую скрипт страницы не видит. Ключей в браузере нет.
+// Запросы идут на тот же адрес, откуда открыта Studio (в разработке их пересылает Vite).
 
-export interface ApiConfig { apiBase: string; apiKey: string }
+export interface ApiConfig { apiBase?: string }
+
+// Кто вошёл: роль решает, что видно и какие кнопки доступны
+export type Role = 'admin' | 'manager' | 'editor';
+export interface Me { login: string; name: string; role: Role; clients: string[]; client: string }
+export const ROLE_RU: Record<Role, string> = { admin: 'инженер IR', manager: 'руководитель', editor: 'редактор' };
 
 export class ApiError extends Error {
   status: number;
@@ -12,19 +19,17 @@ export class ApiError extends Error {
   }
 }
 
-export const apiUrl = (c: ApiConfig, path: string) => `${c.apiBase.replace(/\/$/, '')}${path}`;
+export const apiUrl = (c: ApiConfig, path: string) => `${(c.apiBase ?? '').replace(/\/$/, '')}${path}`;
 
-export const apiHeaders = (c: ApiConfig): Record<string, string> => (c.apiKey ? { 'X-API-Key': c.apiKey } : {});
-
-// fetch с ключом и понятными ошибками. Тело 409 и 4xx отдаём в ApiError.body: там текущая версия
+// fetch с сессией и понятными ошибками. Тело 409 и 4xx отдаём в ApiError.body: там текущая версия
 export async function api<T>(c: ApiConfig, path: string, init: RequestInit = {}): Promise<T> {
-  const headers: Record<string, string> = { ...apiHeaders(c), ...(init.headers as Record<string, string> | undefined) };
+  const headers: Record<string, string> = { ...(init.headers as Record<string, string> | undefined) };
   if (init.body && typeof init.body === 'string') headers['Content-Type'] = 'application/json';
   let res: Response;
   try {
-    res = await fetch(apiUrl(c, path), { ...init, headers });
+    res = await fetch(apiUrl(c, path), { ...init, headers, credentials: 'same-origin' });
   } catch {
-    throw new ApiError(0, 'IR-сервис недоступен. Запустите uv run salesbox-api или проверьте адрес');
+    throw new ApiError(0, 'сервер недоступен: проверьте интернет');
   }
   if (res.status === 204) return undefined as T;
   const text = await res.text();
@@ -32,9 +37,10 @@ export async function api<T>(c: ApiConfig, path: string, init: RequestInit = {})
   try { body = text ? JSON.parse(text) : null; } catch { /* не JSON — оставляем текст */ }
   if (!res.ok) {
     const detail = body && typeof body === 'object' && 'detail' in body ? (body as { detail: unknown }).detail : text;
-    const msg = res.status === 401 || res.status === 403
-      ? 'нет доступа: войдите заново'
-      : `сервис ответил ${res.status}: ${typeof detail === 'string' ? detail.slice(0, 200) : JSON.stringify(detail).slice(0, 200)}`;
+    const text2 = typeof detail === 'string' ? detail.slice(0, 200) : JSON.stringify(detail).slice(0, 200);
+    const msg = res.status === 401 ? (path.endsWith('/login') ? text2 : 'нужно войти заново')
+      : res.status === 403 ? `нет прав: ${text2}`
+      : `сервер ответил ${res.status}: ${text2}`;
     throw new ApiError(res.status, msg, body);
   }
   return body as T;
@@ -54,11 +60,18 @@ export async function analyzePhoto(c: ApiConfig, file: File, fields: Record<stri
   let rec = await api<Rec>(c, '/v1/photos?wait=true', { method: 'POST', body: fd });
   const t0 = Date.now();
   while (rec.status === 'processing') {
-    if (Date.now() - t0 > 120_000) throw new ApiError(0, 'IR не ответил за 2 минуты. Очередь занята, попробуйте позже');
-    progress(`IR считает фото… ${Math.round((Date.now() - t0) / 1000)} с`);
+    if (Date.now() - t0 > 120_000) throw new ApiError(0, 'распознавание не ответило за 2 минуты: очередь занята, попробуйте позже');
+    progress(`Распознаю фото… ${Math.round((Date.now() - t0) / 1000)} с`);
     await new Promise(r => setTimeout(r, 1500));
     rec = await api<Rec>(c, `/v1/photos/${rec.photo_id}`);
   }
   if (rec.status === 'failed') throw new ApiError(0, rec.error ?? 'прогон упал на сервере');
   return { photoId: rec.photo_id ?? null, result: (rec.result ?? rec) as Record<string, unknown> };
 }
+
+// Вход, выход, смена клиента
+export const fetchMe = () => api<Me | null>({}, '/v1/studio/me');
+export const login = (loginName: string, password: string) =>
+  api<Me>({}, '/v1/studio/login', { method: 'POST', body: jsonBody({ login: loginName, password }) });
+export const logout = () => api<void>({}, '/v1/studio/logout', { method: 'POST' });
+export const switchClient = (client: string) => api<Me>({}, '/v1/studio/client', { method: 'POST', body: jsonBody({ client }) });

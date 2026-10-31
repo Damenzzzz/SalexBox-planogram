@@ -91,6 +91,7 @@ export interface JournalEntry {
   version: number;
   action: JournalAction;
   note: string;
+  by?: string;          // кто сделал шаг (имя вошедшего пользователя)
 }
 
 // Кому назначена планограмма: кластеры Studio и отдельные точки (outlet_id)

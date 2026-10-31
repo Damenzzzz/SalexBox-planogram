@@ -117,25 +117,26 @@ export function applyRemote(s: Docs, items: { kind: DocKind; id: string; body: u
   return next;
 }
 
+// Что уже синхронизировано — своё у каждого пространства (пользователь и клиент)
 function loadMeta(base: string): Meta {
   try {
-    const m = JSON.parse(localStorage.getItem(META_KEY) ?? '') as Meta;
+    const m = JSON.parse(localStorage.getItem(`${META_KEY}:${base}`) ?? '') as Meta;
     if (m.base === base) return m;
   } catch { /* нет или битое — начинаем заново */ }
   return { base, seq: 0, revs: {}, hashes: {} };
 }
-const saveMeta = (m: Meta) => { try { localStorage.setItem(META_KEY, JSON.stringify(m)); } catch { /* место кончилось — синхронизируемся с нуля */ } };
-export const resetSyncMeta = () => { try { localStorage.removeItem(META_KEY); } catch { /* нечего чистить */ } };
+const saveMeta = (m: Meta) => { try { localStorage.setItem(`${META_KEY}:${m.base}`, JSON.stringify(m)); } catch { /* место кончилось — синхронизируемся с нуля */ } };
+export const resetSyncMeta = (scope: string) => { try { localStorage.removeItem(`${META_KEY}:${scope}`); } catch { /* нечего чистить */ } };
 
 // Примеры, которые Studio создаёт в новом браузере. Если на сервере уже есть данные, нетронутые примеры
 // не отправляем и убираем: иначе каждый новый компьютер добавлял бы на сервер ещё одну копию
-export function markSeed(s: Docs) {
+export function markSeed(s: Docs, scope: string) {
   const hashes: Record<string, string> = {};
   collect(s).forEach((d, k) => { hashes[k] = hashDoc(d); });
-  try { localStorage.setItem(SEED_KEY, JSON.stringify(hashes)); } catch { /* без отметки примеры просто уйдут на сервер */ }
+  try { localStorage.setItem(`${SEED_KEY}:${scope}`, JSON.stringify(hashes)); } catch { /* без отметки примеры просто уйдут на сервер */ }
 }
-function takeSeed(): Record<string, string> {
-  try { const s = JSON.parse(localStorage.getItem(SEED_KEY) ?? '{}'); localStorage.removeItem(SEED_KEY); return s; } catch { return {}; }
+function takeSeed(scope: string): Record<string, string> {
+  try { const k = `${SEED_KEY}:${scope}`; const s = JSON.parse(localStorage.getItem(k) ?? '{}'); localStorage.removeItem(k); return s; } catch { return {}; }
 }
 
 export interface SyncResult {
@@ -147,8 +148,8 @@ export interface SyncResult {
 }
 
 // Один проход: забрать изменения с сервера, отправить свои
-export async function syncOnce(cfg: ApiConfig, read: () => Docs): Promise<SyncResult> {
-  const meta = loadMeta(cfg.apiBase);
+export async function syncOnce(cfg: ApiConfig, scope: string, read: () => Docs): Promise<SyncResult> {
+  const meta = loadMeta(scope);
   const conflicts: string[] = [];
   const applied: RemoteDoc[] = [];
   const allCopies: Planogram[] = [];
@@ -210,7 +211,7 @@ export async function syncOnce(cfg: ApiConfig, read: () => Docs): Promise<SyncRe
   let pushed = 0;
   const docs = collect(cur());
   const dropped: { kind: DocKind; id: string }[] = [];
-  const seed = first ? takeSeed() : {};
+  const seed = first ? takeSeed(scope) : {};
   if (first && pulled.items.some(d => !d.deleted)) {
     const keep = new Set<string>();
     docs.forEach((d, k) => {

@@ -12,8 +12,13 @@ export const ACTION_RU: Record<JournalAction, string> = {
   published: 'Опубликована', version: 'Новая версия', restored: 'Восстановлена из версии',
 };
 
+// Автор записей журнала — вошедший пользователь; без входа записи без автора
+let author: string | undefined;
+export const setAuthor = (name: string | undefined) => { author = name; };
+
 export function withEntry(p: Planogram, action: JournalAction, note = '', status?: PlanogramStatus): Planogram {
-  return { ...p, status: status ?? p.status, journal: [...p.journal, { at: now(), version: p.version, action, note }] };
+  const entry = { at: now(), version: p.version, action, note, ...(author ? { by: author } : {}) };
+  return { ...p, status: status ?? p.status, journal: [...p.journal, entry] };
 }
 
 export function snapshotOf(p: Planogram, note: string): Snapshot {

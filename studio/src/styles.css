@@ -415,3 +415,5 @@ details.advanced { display: grid; gap: 10px; }
 .lost li span { display: grid; min-width: 0; }
 .lost li b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 13px; }
 .lost li small { color: var(--ink-3); font-size: 12px; }
+.lost > .btn { justify-self: start; }
+.server-btn .client-chip { font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
