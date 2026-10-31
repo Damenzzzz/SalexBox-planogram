@@ -8,6 +8,7 @@ import { Catalog } from './ui/Catalog';
 import { Compare } from './ui/Compare';
 import { Outlets } from './ui/Outlets';
 import { Help } from './ui/Help';
+import { Monitor } from './ui/Monitor';
 import { PriceListView, PrintView } from './ui/Print';
 import { ServerButton } from './ui/Server';
 import { useStore } from './store';
@@ -18,6 +19,7 @@ const TABS: [string, string, string, string[]][] = [
   ['catalog', 'Каталог SKU', 'box', ['catalog']],
   ['compare', 'Сверка IR', 'scan', ['compare']],
   ['outlets', 'Точки', 'pin', ['outlets']],
+  ['monitor', 'Мониторинг', 'chart', ['monitor']],
 ];
 
 export default function App() {
@@ -33,6 +35,7 @@ export default function App() {
   else if (section === 'compare') view = <Compare planogramId={id ?? null} />;
   else if (section === 'outlets') view = <Outlets />;
   else if (section === 'help') view = <Help />;
+  else if (section === 'monitor') view = <Monitor />;
   else view = <Planograms />;
 
   return (
