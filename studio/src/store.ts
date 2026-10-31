@@ -379,3 +379,6 @@ export function useRoute(): string[] {
   return useMemo(() => hash.replace(/^#\/?/, '').split('/').filter(Boolean), [hash]);
 }
 export const go = (path: string) => { location.hash = '#/' + path; };
+
+// В разработке хранилище доступно из консоли браузера для проверок; в сборку сайта не попадает
+if (import.meta.env.DEV) (window as unknown as { studio: typeof useStore }).studio = useStore;

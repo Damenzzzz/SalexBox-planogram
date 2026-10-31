@@ -270,14 +270,21 @@ export function AutoModal({ p, get, list, onApply, onClose }: { p: Planogram; ge
   const placed = useMemo(() => [...new Set([...Object.values(p.rows).flat().map(q => q.sku), ...p.rules.mustHave])], [p]);
   const [skus, setSkus] = useState<string[]>(placed);
   const [add, setAdd] = useState('');
-  const res = useMemo(() => autoLayout(p, get, { skus }), [p, get, skus]);
+  const [eyeLevel, setEyeLevel] = useState(true);
+  const [bySales, setBySales] = useState(true);
+  const res = useMemo(() => autoLayout(p, get, { skus, eyeLevel, bySales }), [p, get, skus, eyeLevel, bySales]);
+  const salesKnown = useMemo(() => skus.filter(id => (get(id)?.sales ?? 0) > 0).length, [skus, get]);
   const options = useMemo(() => list.filter(s => !skus.includes(s.id)).sort((a, b) => a.name.localeCompare(b.name)), [list, skus]);
   return (
     <Modal title="Разложить по правилам" onClose={onClose} footer={<>
       <button className="btn" onClick={onClose}>Отмена</button>
       <button className="btn btn-primary" disabled={!skus.length} onClick={() => { onApply(res.planogram); onClose(); }}><Icon name="wand" size={15} />Разложить</button>
     </>}>
-      <p className="hint">Обязательные SKU получают свой минимум, производители — долю по контракту, остальное делится поровну. Блоки идут по производителю и бренду, премиум выше, близнецы не рядом. Отменить — ⌘Z.</p>
+      <p className="hint">Обязательные SKU получают свой минимум, производители — долю по контракту, остальное делится по продажам или поровну. Блоки идут по производителю и бренду, премиум раньше, похожие пачки не рядом. Отменить — ⌘Z.</p>
+      <div className="row-actions">
+        <label className="check"><input type="checkbox" checked={eyeLevel} onChange={e => setEyeLevel(e.target.checked)} />Приоритетное — на уровень глаз (120–160 см)</label>
+        <label className="check" title={salesKnown ? undefined : 'Продажи заполняются в «Каталоге SKU»'}><input type="checkbox" checked={bySales && salesKnown > 0} disabled={!salesKnown} onChange={e => setBySales(e.target.checked)} />Фейсинги по продажам{salesKnown ? ` (есть у ${salesKnown} из ${skus.length})` : ' — нет данных о продажах'}</label>
+      </div>
       <div className="fit-preview">
         <SceneThumb width={220} height={240} scene={{ fx: p.fixture, rows: res.planogram.rows, sku: get, mode: 'texture', warn: true, dims: false }} />
         <div style={{ display: 'grid', gap: 8, alignContent: 'start', minWidth: 0 }}>
