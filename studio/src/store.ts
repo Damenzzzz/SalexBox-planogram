@@ -237,13 +237,15 @@ async function openScope(me: Me | null) {
   if (me) scheduleSync(300);
 }
 
-// Загрузка при старте: main.tsx рисует приложение после неё. Нет сети — работаем в
-// пространстве последнего входа, синхронизация догонит; сессия кончилась — без входа
+// Загрузка при старте: main.tsx рисует приложение сразу после чтения браузерных данных — в
+// пространстве последнего входа. Сессию сервер проверяет в фоне: кончилась или вошли под другим
+// клиентом — переключаемся. Сервер недоступен — работаем дальше, синхронизация догонит
+const same = (a: Me | null, b: Me | null) => (a?.login ?? null) === (b?.login ?? null) && (a?.client ?? null) === (b?.client ?? null);
 export async function hydrate() {
-  let me: Me | null;
-  try { me = await fetchMe(); }
-  catch (e) { me = e instanceof ApiError && e.status === 0 ? rememberedMe() : null; }
-  await openScope(me);
+  await openScope(rememberedMe());
+  fetchMe()
+    .then(me => { if (!same(me, useStore.getState().me)) return openScope(me); if (me) { useStore.setState({ me }); rememberMe(me); } })
+    .catch(e => { if (e instanceof ApiError && (e.status === 401 || e.status === 403)) return openScope(null); });
 }
 
 export async function signIn(loginName: string, password: string) {

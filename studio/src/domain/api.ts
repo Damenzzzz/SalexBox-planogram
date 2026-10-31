@@ -31,6 +31,9 @@ export async function api<T>(c: ApiConfig, path: string, init: RequestInit = {})
   } catch {
     throw new ApiError(0, 'сервер недоступен: проверьте интернет');
   }
+  if (res.status === 502 || res.status === 503 || res.status === 504) {
+    throw new ApiError(0, 'сервер сейчас недоступен, попробуйте позже');   // CDN не достучался до сервера
+  }
   if (res.status === 204) return undefined as T;
   const text = await res.text();
   let body: unknown = text;
