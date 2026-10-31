@@ -1,4 +1,5 @@
 import type { ShelfResult } from '../domain/compare';
+import { ghostSku } from '../domain/catalog';
 import { FORMATS } from '../domain/formats';
 import { ceilingOf, clearanceOf, innerW, laneOf, lanesFor, packFloor, shelfIndex, sortedShelves } from '../domain/geometry';
 import type { FormatId, Fixture, IrSlot, Placement, Sku, SlotStatus } from '../domain/types';
@@ -180,8 +181,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, o: SceneOpts): HitRect[
     const res = o.compare?.get(shelfId);
     let x = fx.side, k = 0;
     row.forEach(pl => {
-      const s = o.sku(pl.sku);
-      if (!s) { x += 59 * pl.facings; return; }
+      const s = o.sku(pl.sku) ?? ghostSku(pl.sku);   // нет в каталоге — рисуем по метке
       const lane = laneOf(fx, sh, s);
       if (schema) {
         const x0 = X(x), x1 = X(x + lane * pl.facings), y0 = Y(fy + Math.min(s.h, cy - fy)), y1 = Y(fy);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { capacity, sortedShelves } from '../domain/geometry';
-import { newPlanogram } from '../domain/templates';
+import { extraFixtures, newPlanogram } from '../domain/templates';
 import type { Doors, Material } from '../domain/types';
 import { go, useStore } from '../store';
 import { Icon, SceneThumb } from './common';
@@ -22,6 +22,12 @@ export function Fixtures() {
           <p>Библиотека шаблонов: размеры шкафа, полки и ряды толкателей. Код вроде С1-96-170 собирается из номера, ширины и высоты в сантиметрах, его можно заменить своим.</p>
         </div>
         <div className="actions">
+          <button className="btn" onClick={() => {
+            const have = new Set(useStore.getState().fixtures.map(f => f.code));
+            const add = extraFixtures().filter(f => !have.has(f.code));
+            add.forEach(f => useStore.getState().saveFixture(f));
+            notify(add.length ? `Добавлено типовых шкафов: ${add.length}` : 'Все типовые шкафы уже в библиотеке');
+          }}><Icon name="cabinet" />Типовые шкафы</button>
           <button className="btn btn-primary" onClick={() => go(`fixture/${createFixture()}`)}><Icon name="plus" />Новый шкаф</button>
         </div>
       </div>

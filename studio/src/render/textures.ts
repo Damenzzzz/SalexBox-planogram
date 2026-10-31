@@ -139,12 +139,30 @@ export function makeTexture(sku: Sku, W: number, H: number, warn: boolean, photo
 // Фото эталонов включены: setPhotos(true) из настроек Studio
 let photos = true;
 export const setPhotos = (on: boolean) => { photos = on; };
-const photoOf = (sku: Sku) => (photos ? galleryImage(sku.label) : null);
+
+// Своя лицевая сторона SKU (вырезка из фото полки, data URL): грузится один раз, потом холсты перерисовываются
+const own = new Map<string, HTMLImageElement | 'loading'>();
+let onOwnLoaded: () => void = () => {};
+export const setOwnPhotoListener = (fn: () => void) => { onOwnLoaded = fn; };
+function ownPhoto(url: string): HTMLImageElement | null {
+  const got = own.get(url);
+  if (got instanceof HTMLImageElement) return got;
+  if (!got) {
+    own.set(url, 'loading');
+    const img = new Image();
+    img.onload = () => { own.set(url, img); onOwnLoaded(); };
+    img.onerror = () => own.delete(url);
+    img.src = url;
+  }
+  return null;
+}
+const photoOf = (sku: Sku) => (sku.photo ? ownPhoto(sku.photo) : null) ?? (photos ? galleryImage(sku.label) : null);
+const photoKey = (sku: Sku, photo: HTMLImageElement | null) => (photo ? (sku.photo ? `own${sku.photo.length}` : 'gal') : '-');
 
 const cache = new Map<string, HTMLCanvasElement>();
 export function texture(sku: Sku, W: number, H: number, warn: boolean) {
   const photo = photoOf(sku);
-  const key = `${sku.id}|${sku.look.c[0]}|${sku.look.a}|${Math.round(W)}|${Math.round(H)}|${warn ? 1 : 0}|${photo ? 1 : 0}`;
+  const key = `${sku.id}|${sku.look.c[0]}|${sku.look.a}|${Math.round(W)}|${Math.round(H)}|${warn ? 1 : 0}|${photoKey(sku, photo)}`;
   let t = cache.get(key);
   if (!t) {
     if (cache.size > 2500) cache.clear();
@@ -158,7 +176,7 @@ export const clearTextures = () => cache.clear();
 const thumbs = new Map<string, string>();
 export function thumbURL(sku: Sku, scale = 1.6, warn = false) {
   const photo = photoOf(sku);
-  const key = `${sku.id}|${sku.w}|${sku.h}|${sku.look.c[0]}|${scale}|${warn}|${photo ? 1 : 0}`;
+  const key = `${sku.id}|${sku.w}|${sku.h}|${sku.look.c[0]}|${scale}|${warn}|${photoKey(sku, photo)}`;
   let u = thumbs.get(key);
   if (!u) { u = makeTexture(sku, sku.w * scale, sku.h * scale, warn, photo).toDataURL(); thumbs.set(key, u); }
   return u;

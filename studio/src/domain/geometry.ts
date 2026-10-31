@@ -98,3 +98,21 @@ export function capacity(fx: Fixture) {
     { ksLanes: 0, ssLanes: 0, packs: 0 },
   );
 }
+
+// Ужать шкаф под раскладку: ширина — по самому заполненному ряду, каждая полка — по высоте своих
+// пачек с запасом сверху. Id полок сохраняются: раскладка остаётся на своих местах
+export function compactFixture(fx: Fixture, rows: Record<string, Placement[]>, sku: (id: string) => Sku | undefined, clearAbove = 25): Fixture {
+  const next: Fixture = structuredClone(fx);
+  const shelves = sortedShelves(next);
+  const used = Math.max(0, ...shelves.map(sh => usedWidth(next, sh, rows[sh.id] ?? [], sku)));
+  if (used > 0) next.w = Math.ceil((used + 2 * next.side + 10) / 10) * 10;
+  let y = next.base;
+  shelves.forEach(sh => {
+    const tallest = Math.max(0, ...(rows[sh.id] ?? []).map(p => sku(p.sku)?.h ?? 0));
+    sh.y = y;
+    y += (tallest || clearanceOf(fx, fx.shelves.find(q => q.id === sh.id)!)) + clearAbove + next.board;
+  });
+  next.h = Math.ceil((y + next.header) / 10) * 10;
+  if (next.codeAuto) next.code = next.code.replace(/-\d+-\d+$/, `-${Math.round(next.w / 10)}-${Math.round(next.h / 10)}`);
+  return next;
+}

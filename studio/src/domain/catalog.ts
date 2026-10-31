@@ -98,19 +98,30 @@ export function makeLook(brand: string, model: string): Look {
   };
 }
 
+// SKU по метке IR «Бренд/Модель»: формат, производитель и вид — из названия
+export function skuFromLabel(label: string, refs = 0, custom = false): Sku {
+  const i = label.indexOf('/');
+  const brand = i > 0 ? label.slice(0, i) : label, model = i > 0 ? label.slice(i + 1) : label;
+  const { format, guessed } = formatFromLabel(model, brand);
+  const f = FORMATS[format];
+  return {
+    id: label, label, brand, name: model, maker: makerOf(brand), segment: segmentOf(brand), format,
+    w: f.w, h: f.h, d: f.d, measured: false, formatGuessed: guessed, refs, price: null, ean: '',
+    look: makeLook(brand, model), custom,
+  };
+}
+
 // refs — эталонов на метку с сервера (только инженеру); без них 0: в сборке сайта этих чисел нет
 export function baseCatalog(refs: Record<string, number> | null = null): Sku[] {
-  return gallery.labels.map(({ label }) => {
-    const i = label.indexOf('/');
-    const brand = label.slice(0, i), model = label.slice(i + 1);
-    const { format, guessed } = formatFromLabel(model, brand);
-    const f = FORMATS[format];
-    return {
-      id: label, label, brand, name: model, maker: makerOf(brand), segment: segmentOf(brand), format,
-      w: f.w, h: f.h, d: f.d, measured: false, formatGuessed: guessed, refs: refs?.[label] ?? 0, price: null, ean: '',
-      look: makeLook(brand, model), custom: false,
-    };
-  });
+  return gallery.labels.map(({ label }) => skuFromLabel(label, refs?.[label] ?? 0));
+}
+
+// Пачка, которой нет в каталоге: рисуем её по метке, а не пропускаем молча
+const ghosts = new Map<string, Sku>();
+export function ghostSku(id: string): Sku {
+  let s = ghosts.get(id);
+  if (!s) { s = skuFromLabel(id.replace(/^custom:/, '')); s.id = id; ghosts.set(id, s); }
+  return s;
 }
 
 // Каталог = галерея + правки пользователя + свои SKU

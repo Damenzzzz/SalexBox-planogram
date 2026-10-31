@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { analyse, visibleIssues, type Analysis, type Issue } from '../domain/checks';
 import { FORMATS, FORMAT_ORDER, MAKERS, MAKER_ORDER, SEGMENTS } from '../domain/formats';
-import { clearanceOf, innerW, laneOf, packFloor, packsDeep, shelfIndex, shelvesTopDown, uid, usedWidth } from '../domain/geometry';
+import { clampShelfY, clearanceOf, compactFixture, innerW, laneOf, packFloor, packsDeep, shelfIndex, shelvesTopDown, sortedShelves, uid, usedWidth } from '../domain/geometry';
 import { planogramSheets } from '../domain/exports';
 import { download, toBundle } from '../domain/io';
 import { fileName, irName, toIrYaml, zonesOf } from '../domain/irExport';
@@ -429,6 +429,7 @@ function EditorView({ p }: { p: Planogram }) {
                 <p className="hint">Нажмите на блок пачек, чтобы менять фейсинги, или перетащите SKU из каталога. Клавиши: ← → двигают блок, ↑ ↓ меняют полку, + − фейсинги, ⌘Z отмена.</p>
               </section>
             ) : null)}
+            {tab === 'props' && !selected && selShelf && <FixtureSize p={p} shelfId={selShelf.id} get={get} update={update} />}
 
             {tab === 'rules' && <Rules p={p} update={update} get={get} placed={a.placed} />}
 
@@ -585,6 +586,27 @@ function PhotoCheck({ p, yaml, tech, update, onCompare }: { p: Planogram; yaml: 
         </details>
       )}
     </>
+  );
+}
+
+// Размер шкафа этой планограммы: ширина, высота выбранной полки и «ужать по пачкам».
+// Меняется копия шкафа в планограмме, шаблон в библиотеке не трогается
+function FixtureSize({ p, shelfId, get, update }: { p: Planogram; shelfId: string; get: (id: string) => Sku | undefined; update: (fn: (q: Planogram) => void) => void }) {
+  const fx = p.fixture;
+  const sh = fx.shelves.find(s => s.id === shelfId)!;
+  const minW = Math.max(200, ...sortedShelves(fx).map(s => usedWidth(fx, s, p.rows[s.id] ?? [], get))) + 2 * fx.side;
+  const code = (q: Planogram) => { if (q.fixture.codeAuto) q.fixture.code = q.fixture.code.replace(/-\d+-\d+$/, `-${Math.round(q.fixture.w / 10)}-${Math.round(q.fixture.h / 10)}`); };
+  return (
+    <section className="section">
+      <h3>Размер шкафа</h3>
+      <div className="grid2">
+        <NumField value={fx.w} min={minW} max={3000} step={10} label="Ширина" onChange={v => update(q => { q.fixture.w = Math.max(minW, v ?? fx.w); code(q); })} />
+        <NumField value={fx.h} min={fx.base + fx.header + 200} max={3000} step={10} label="Высота" onChange={v => update(q => { q.fixture.h = Math.max(sortedShelves(q.fixture).at(-1)!.y + q.fixture.board + 80 + q.fixture.header, v ?? fx.h); code(q); })} />
+        <NumField value={sh.y} step={5} label="Эта полка от пола" onChange={v => update(q => { const s = q.fixture.shelves.find(x => x.id === shelfId)!; s.y = clampShelfY(q.fixture, shelfId, v ?? s.y); })} />
+      </div>
+      <p className="hint">Уже чем {minW} мм не сделать: не встанут пачки. Шаблон в библиотеке не меняется.</p>
+      <button className="btn btn-sm" onClick={() => update(q => { q.fixture = compactFixture(q.fixture, q.rows, get); })}><Icon name="spread" size={15} />Ужать шкаф по пачкам</button>
+    </section>
   );
 }
 

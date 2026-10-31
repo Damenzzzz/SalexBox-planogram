@@ -34,12 +34,13 @@ export interface Sku {
   refs: number;             // эталонов в галерее
   price: number | null;     // ₸
   sales?: number | null;    // продаж в неделю, пачек: авто-раскладка делит фейсинги по ним
+  photo?: string | null;    // лицевая сторона с реального фото полки (data URL JPEG): рисуется вместо условной
   ean: string;
   look: Look;
   custom: boolean;          // добавлен вручную
 }
 
-export type SkuPatch = Partial<Pick<Sku, 'maker' | 'segment' | 'format' | 'w' | 'h' | 'd' | 'measured' | 'price' | 'sales' | 'ean' | 'name'>>;
+export type SkuPatch = Partial<Pick<Sku, 'maker' | 'segment' | 'format' | 'w' | 'h' | 'd' | 'measured' | 'price' | 'sales' | 'ean' | 'name' | 'photo'>>;
 
 export type Doors = 'none' | 'glass' | 'shutter';
 export type Material = 'graphite' | 'wood' | 'white';
