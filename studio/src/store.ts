@@ -7,6 +7,7 @@ import { clearTextures, clearThumbs, setPhotos } from './render/textures';
 import { autoCode, uid } from './domain/geometry';
 import type { ImportResult } from './domain/io';
 import { normalizePlanogram, seedFixtures, seedPlanogram } from './domain/templates';
+import { readData, writeData } from './domain/persist';
 import { snapshotOf } from './domain/versions';
 import type { Cluster, Fixture, IrRun, Planogram, Sku, SkuPatch, Snapshot } from './domain/types';
 
@@ -58,30 +59,28 @@ interface State extends Data {
   deleteCluster: (id: string) => void;
 }
 
-const KEY = 'planogram-studio.v2';
 const now = () => new Date().toISOString();
+const MAX_RUNS = 500;   // сверок в браузере: в IndexedDB места хватает, старые остаются на сервере
 
-function load(): Data {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const d = JSON.parse(raw) as Partial<Data>;
-      if (d.fixtures && d.planograms) {
-        return {
-          fixtures: d.fixtures, planograms: d.planograms.map(normalizePlanogram), snapshots: d.snapshots ?? [], clusters: d.clusters ?? [],
-          patches: d.patches ?? {}, custom: d.custom ?? [], runs: d.runs ?? [], settings: { ...DEFAULT_SETTINGS, ...(d.settings ?? {}) },
-        };
-      }
-    }
-  } catch { /* пустое или битое хранилище — начинаем с примеров */ }
+const EMPTY: Data = { fixtures: [], planograms: [], snapshots: [], clusters: [], patches: {}, custom: [], runs: [], settings: { ...DEFAULT_SETTINGS } };
+
+// Сохранённые данные → состояние; пусто или битое — примеры для первого запуска
+function normalize(raw: unknown): Data {
+  const d = (raw ?? {}) as Partial<Data>;
+  if (Array.isArray(d.fixtures) && Array.isArray(d.planograms)) {
+    return {
+      fixtures: d.fixtures, planograms: d.planograms.map(normalizePlanogram), snapshots: d.snapshots ?? [], clusters: d.clusters ?? [],
+      patches: d.patches ?? {}, custom: d.custom ?? [], runs: d.runs ?? [], settings: { ...DEFAULT_SETTINGS, ...(d.settings ?? {}) },
+    };
+  }
   const fixtures = seedFixtures();
-  const seed: Data = { fixtures, planograms: [seedPlanogram(fixtures[0])], snapshots: [], clusters: [], patches: {}, custom: [], runs: [], settings: { ...DEFAULT_SETTINGS } };
+  const seed: Data = { ...EMPTY, fixtures, planograms: [seedPlanogram(fixtures[0])] };
   markSeed(seed);
   return seed;
 }
 
 export const useStore = create<State>((set, get) => ({
-  ...load(),
+  ...EMPTY,
   toast: null,
   sync: { status: 'off', at: null, error: null },
   texRev: 0,
@@ -141,7 +140,7 @@ export const useStore = create<State>((set, get) => ({
   saveCustomSku: sku => set(s => ({ custom: s.custom.some(c => c.id === sku.id) ? s.custom.map(c => (c.id === sku.id ? sku : c)) : [...s.custom, sku] })),
   deleteCustomSku: id => set(s => ({ custom: s.custom.filter(c => c.id !== id) })),
 
-  addRun: r => set(s => ({ runs: [r, ...s.runs].slice(0, 200) })),
+  addRun: r => set(s => ({ runs: [r, ...s.runs].slice(0, MAX_RUNS) })),
   updateRun: (id, fn) => set(s => ({ runs: s.runs.map(r => (r.id === id ? fn(r) : r)) })),
   deleteRun: id => set(s => ({ runs: s.runs.filter(r => r.id !== id) })),
 
@@ -177,17 +176,27 @@ export const dataOf = (s: Data): Data => ({
   patches: s.patches, custom: s.custom, runs: s.runs, settings: s.settings,
 });
 
-// Сохранение в браузере с задержкой: правки на холсте идут пачками
+// Сохранение в браузере с задержкой: правки на холсте идут пачками. До загрузки не пишем,
+// иначе пустое состояние затёрло бы сохранённое
+let hydrated = false;
 function persist(s: State) {
-  try { localStorage.setItem(KEY, JSON.stringify(dataOf(s))); }
-  catch { s.notify('Не удалось сохранить в браузере: место закончилось. Выгрузите JSON и удалите старые сверки'); }
+  writeData(dataOf(s)).catch(() => s.notify('Не удалось сохранить в браузере: место закончилось. Выгрузите JSON и удалите старые сверки'));
 }
 let timer: ReturnType<typeof setTimeout> | undefined;
 useStore.subscribe(s => {
+  if (!hydrated) return;
   clearTimeout(timer);
   timer = setTimeout(() => persist(s), 300);
 });
-persist(useStore.getState());   // примеры при первом запуске тоже сохраняем
+
+// Загрузка при старте: main.tsx рисует приложение после неё
+export async function hydrate() {
+  useStore.setState(normalize(await readData()));
+  hydrated = true;
+  persist(useStore.getState());   // примеры при первом запуске тоже сохраняем
+  refreshGallery();
+  if (useStore.getState().settings.sync) scheduleSync(300);
+}
 
 // ---- хранение в IR-сервисе: проход при включении, через 2 с после правки и раз в 15 с ----
 let syncing = false, again = false;
@@ -220,6 +229,7 @@ export const resetSync = () => { resetSyncMeta(); scheduleSync(0); };
 
 const DOC_KEYS = ['fixtures', 'planograms', 'snapshots', 'clusters', 'patches', 'custom', 'runs'] as const;
 useStore.subscribe((s, prev) => {
+  if (!hydrated) return;
   if (s.settings !== prev.settings) {
     const conn = s.settings.apiBase !== prev.settings.apiBase || s.settings.apiKey !== prev.settings.apiKey;
     if (s.settings.sync !== prev.settings.sync || (s.settings.sync && conn)) scheduleSync(0);
@@ -228,7 +238,7 @@ useStore.subscribe((s, prev) => {
   }
   if (s.settings.sync && DOC_KEYS.some(k => s[k] !== prev[k])) scheduleSync();
 });
-setInterval(() => { if (useStore.getState().settings.sync) runSync(); }, 15_000);
+setInterval(() => { if (hydrated && useStore.getState().settings.sync) runSync(); }, 15_000);
 
 // ---- фото эталонов как текстуры ----
 setGalleryListener(() => { clearTextures(); clearThumbs(); useStore.setState(st => ({ texRev: st.texRev + 1 })); });
@@ -243,8 +253,6 @@ function refreshGallery() {
     connectGallery(on ? st : null);
   }, 400);
 }
-refreshGallery();
-if (useStore.getState().settings.sync) scheduleSync(300);
 
 // Технические блоки IR видны только инженеру; обычный пользователь их не видит
 export const useTech = () => useStore(s => s.settings.tech);
