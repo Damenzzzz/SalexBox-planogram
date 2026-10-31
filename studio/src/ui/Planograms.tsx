@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { analyzePhoto } from '../domain/api';
 import { analyse } from '../domain/checks';
-import { draftFromPhoto, type PhotoResultIn } from '../domain/draft';
+import { cropFaces, draftFromPhoto, type PhotoResultIn } from '../domain/draft';
 import { runStats } from '../domain/compare';
 import { download, importText, toBundle } from '../domain/io';
 import { capacity, sortedShelves } from '../domain/geometry';
@@ -154,26 +154,32 @@ function NewPlanogram({ onClose, onCreate }: { onClose: () => void; onCreate: (p
 function DraftModal({ onClose, onCreate }: { onClose: () => void; onCreate: (p: Planogram) => void }) {
   const fixtures = useStore(s => s.fixtures);
   const { byId } = useCatalog();
-  const { notify } = useStore.getState();
+  const { notify, saveCustomSku, patchSku } = useStore.getState();
   const [tpl, setTpl] = useState(fixtures[0]?.id ?? '');
   const [name, setName] = useState('Черновик по фото');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const fx = fixtures.find(f => f.id === tpl);
-  const make = (result: PhotoResultIn) => {
+  // file — само фото: из него вырезаются лицевые стороны пачек, чтобы планограмма выглядела как полка
+  const make = async (result: PhotoResultIn, file: File | null) => {
     if (!fx) return;
-    const { planogram, notes } = draftFromPhoto(result, fx, name.trim() || 'Черновик по фото', id => byId.has(id));
-    notify(notes.join('. '));
+    const { planogram, notes, newSkus, faces } = draftFromPhoto(result, fx, name.trim() || 'Черновик по фото', id => byId.get(id));
+    const photos = file ? await cropFaces(file, faces, result.detection?.image).catch(() => new Map<string, string>()) : new Map<string, string>();
+    newSkus.forEach(s => saveCustomSku({ ...s, photo: photos.get(s.id) ?? null }));
+    photos.forEach((url, id) => { if (byId.has(id)) patchSku(id, { photo: url }); });
+    if (photos.size) notes.push(`лицевые стороны ${photos.size} SKU взяты с фото`);
+    notify(notes.map(n => n[0].toUpperCase() + n.slice(1)).join('. '));
     onCreate(planogram);
   };
   const onFile = async (f: File) => {
     setError(null);
     try {
-      if (f.name.endsWith('.json')) { const doc = JSON.parse(await f.text()); make((doc.result ?? doc) as PhotoResultIn); return; }
+      if (f.name.endsWith('.json')) { const doc = JSON.parse(await f.text()); await make((doc.result ?? doc) as PhotoResultIn, null); return; }
       setBusy('Отправляю фото в IR…');
       const { result } = await analyzePhoto({}, f, {}, setBusy);
-      make({ ...(result as PhotoResultIn), photo: f.name });
+      setBusy('Собираю шкаф по фото…');
+      await make({ ...(result as PhotoResultIn), photo: f.name }, f);
     } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   };
   return (
@@ -181,9 +187,9 @@ function DraftModal({ onClose, onCreate }: { onClose: () => void; onCreate: (p: 
       <button className="btn" onClick={onClose}>Отмена</button>
       <button className="btn btn-primary" disabled={!fx || !!busy} onClick={() => input.current?.click()}><Icon name="camera" size={15} />Выбрать фото или JSON</button>
     </>}>
-      <p className="hint">Фото выкладки в точке или картинка планограммы от клиента. Распознавание найдёт ряды и пачки, а Studio поставит их на выбранный шкаф: полок будет столько же, сколько рядов на фото. Неузнанные пачки останутся пустыми местами.</p>
+      <p className="hint">Фото выкладки в точке или картинка планограммы от клиента. Распознавание найдёт ряды и пачки, а Studio соберёт шкаф по фото: столько полок, сколько рядов, ширина — по самому длинному ряду, лицевые стороны пачек — вырезки из снимка. Неузнанные пачки останутся пустыми местами.</p>
       <label className="field"><span>Название</span><input className="input" value={name} onChange={e => setName(e.target.value)} /></label>
-      <div className="field"><span>Шкаф</span>
+      <div className="field"><span>Стиль шкафа: дверцы, материал, ряды толкателя</span>
         <select className="select" value={tpl} onChange={e => setTpl(e.target.value)}>
           {fixtures.map(f => <option key={f.id} value={f.id}>{f.code} · {f.name}</option>)}
         </select></div>

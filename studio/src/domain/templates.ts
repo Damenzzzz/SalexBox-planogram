@@ -28,6 +28,20 @@ export function seedFixtures(): Fixture[] {
     fixture({ ...common, code: 'С3-96-204', name: 'Высокий шкаф', w: 963, h: 2040, d: 350, base: 120, header: 180, doors: 'shutter', material: 'graphite', count: 10 }),
     fixture({ ...common, code: 'С4-71-204', name: 'Высокий с нишей для запаса', w: 711, h: 2040, d: 350, base: 520, header: 160, doors: 'shutter', material: 'graphite', count: 7 }),
     fixture({ ...common, code: 'С5-70-180', name: 'Шкаф RKS с раздвижной дверью', w: 700, h: 1800, d: 300, base: 300, header: 120, doors: 'glass', material: 'wood', count: 7 }),
+    ...extraFixtures(),
+  ];
+}
+
+// Типовые полки с фото точек: прилавочный диспенсер, компактная навесная, узкий кассовый и др.
+// Добавляются и в уже открытый Studio кнопкой «Типовые шкафы»
+export function extraFixtures(): Fixture[] {
+  const common = { side: 20, board: 16, rail: 30, laneMode: 'format' as const, laneWidth: 59 };
+  return [
+    fixture({ ...common, code: 'С6-60-75', name: 'Прилавочный диспенсер, 3 ряда', w: 600, h: 750, d: 300, base: 40, header: 120, doors: 'none', material: 'graphite', count: 3 }),
+    fixture({ ...common, code: 'С7-55-45', name: 'Компактная навесная полка, 2 ряда', w: 550, h: 450, d: 280, base: 30, header: 0, doors: 'none', material: 'white', count: 2 }),
+    fixture({ ...common, code: 'С8-45-110', name: 'Узкий кассовый, 5 полок', w: 450, h: 1100, d: 300, base: 60, header: 80, doors: 'shutter', material: 'graphite', count: 5 }),
+    fixture({ ...common, code: 'С9-90-90', name: 'Над кассой, 4 полки', w: 900, h: 900, d: 320, base: 40, header: 100, doors: 'shutter', material: 'white', count: 4 }),
+    fixture({ ...common, code: 'С10-120-200', name: 'Широкий шкаф, 9 полок', w: 1200, h: 2000, d: 350, base: 120, header: 180, doors: 'shutter', material: 'graphite', count: 9 }),
   ];
 }
 

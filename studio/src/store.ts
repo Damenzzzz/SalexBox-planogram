@@ -4,7 +4,7 @@ import { buildCatalog } from './domain/catalog';
 import { ApiError, api, fetchMe, login as apiLogin, logout as apiLogout, switchClient as apiSwitch, type Me } from './domain/api';
 import { applyRemote, markSeed, resetSyncMeta, syncOnce, type Lost } from './domain/sync';
 import { connectGallery, setGalleryListener } from './render/gallery';
-import { clearTextures, clearThumbs, setPhotos } from './render/textures';
+import { clearTextures, clearThumbs, setOwnPhotoListener, setPhotos } from './render/textures';
 import { autoCode, uid } from './domain/geometry';
 import type { ImportResult } from './domain/io';
 import { normalizePlanogram, seedFixtures, seedPlanogram } from './domain/templates';
@@ -336,7 +336,14 @@ useStore.subscribe((s, prev) => {
 setInterval(() => { if (hydrated && useStore.getState().me) runSync(); }, 15_000);
 
 // ---- фото эталонов как текстуры ----
-setGalleryListener(() => { clearTextures(); clearThumbs(); useStore.setState(st => ({ texRev: st.texRev + 1 })); });
+// Догрузились фото пачек — перерисовать холсты; пачка загрузок склеивается в одну перерисовку
+let redrawTimer: ReturnType<typeof setTimeout> | undefined;
+const redraw = () => {
+  clearTimeout(redrawTimer);
+  redrawTimer = setTimeout(() => { clearTextures(); clearThumbs(); useStore.setState(st => ({ texRev: st.texRev + 1 })); }, 60);
+};
+setGalleryListener(redraw);
+setOwnPhotoListener(redraw);
 let galleryTimer: ReturnType<typeof setTimeout> | undefined;
 function refreshGallery() {
   clearTimeout(galleryTimer);
