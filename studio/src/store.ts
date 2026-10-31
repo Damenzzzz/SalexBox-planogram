@@ -1,6 +1,7 @@
 import { useMemo, useSyncExternalStore } from 'react';
 import { create } from 'zustand';
 import { buildCatalog } from './domain/catalog';
+import { ApiError, api, fetchMe, login as apiLogin, logout as apiLogout, switchClient as apiSwitch, type Me } from './domain/api';
 import { applyRemote, markSeed, resetSyncMeta, syncOnce, type Lost } from './domain/sync';
 import { connectGallery, setGalleryListener } from './render/gallery';
 import { clearTextures, clearThumbs, setPhotos } from './render/textures';
@@ -8,17 +9,24 @@ import { autoCode, uid } from './domain/geometry';
 import type { ImportResult } from './domain/io';
 import { normalizePlanogram, seedFixtures, seedPlanogram } from './domain/templates';
 import { readData, writeData } from './domain/persist';
-import { snapshotOf } from './domain/versions';
+import { setAuthor, snapshotOf } from './domain/versions';
 import type { Cluster, Fixture, IrRun, Planogram, Sku, SkuPatch, Snapshot } from './domain/types';
 
 export interface Settings {
-  apiBase: string; apiKey: string; warn: boolean;
-  sync: boolean;               // хранить шкафы, планограммы и сверки в IR-сервисе
+  warn: boolean;
   galleryTextures: boolean;    // фото эталонов вместо нарисованных пачек, если сервис их отдаёт
-  tech: boolean;               // технические детали IR: метки, эталоны, YAML, стоимости выравнивания
+  tech: boolean;               // технические детали IR: метки, эталоны, YAML; действует только у инженера
 }
 
-const DEFAULT_SETTINGS: Settings = { apiBase: '', apiKey: '', warn: true, sync: false, galleryTextures: true, tech: false };
+const DEFAULT_SETTINGS: Settings = { warn: true, galleryTextures: true, tech: false };
+const pickSettings = (raw: Partial<Settings> | undefined): Settings => ({
+  warn: raw?.warn ?? DEFAULT_SETTINGS.warn,
+  galleryTextures: raw?.galleryTextures ?? DEFAULT_SETTINGS.galleryTextures,
+  tech: raw?.tech ?? DEFAULT_SETTINGS.tech,
+});
+
+// Пространство данных браузера: без входа — local, после входа — свой у пользователя и клиента
+export const scopeOf = (me: Me | null) => (me ? `u:${me.login}:${me.client}` : 'local');
 
 export interface Data {
   fixtures: Fixture[];
@@ -35,6 +43,9 @@ export interface Data {
 export type SyncStatus = 'off' | 'idle' | 'syncing' | 'error';
 
 interface State extends Data {
+  me: Me | null;               // кто вошёл; null — работа только в этом браузере
+  scope: string;
+  refs: Record<string, number> | null;   // эталонов на метку: только инженеру, с сервера
   toast: { text: string; id: number } | null;
   sync: { status: SyncStatus; at: string | null; error: string | null };
   texRev: number;              // меняется, когда догрузились фото эталонов: холсты перерисуются
@@ -67,23 +78,27 @@ const MAX_RUNS = 500;   // сверок в браузере: в IndexedDB мес
 
 const EMPTY: Data = { fixtures: [], planograms: [], snapshots: [], clusters: [], patches: {}, custom: [], runs: [], lost: [], settings: { ...DEFAULT_SETTINGS } };
 
-// Сохранённые данные → состояние; пусто или битое — примеры для первого запуска
-function normalize(raw: unknown): Data {
+// Сохранённые данные → состояние; пусто — примеры для первого запуска. В пространстве клиента
+// примеров планограмм нет, только типовые шкафы: на сервер клиента не уходит демо-раскладка
+function normalize(raw: unknown, scope: string): Data {
   const d = (raw ?? {}) as Partial<Data>;
   if (Array.isArray(d.fixtures) && Array.isArray(d.planograms)) {
     return {
       fixtures: d.fixtures, planograms: d.planograms.map(normalizePlanogram), snapshots: d.snapshots ?? [], clusters: d.clusters ?? [],
-      patches: d.patches ?? {}, custom: d.custom ?? [], runs: d.runs ?? [], lost: d.lost ?? [], settings: { ...DEFAULT_SETTINGS, ...(d.settings ?? {}) },
+      patches: d.patches ?? {}, custom: d.custom ?? [], runs: d.runs ?? [], lost: d.lost ?? [], settings: pickSettings(d.settings),
     };
   }
   const fixtures = seedFixtures();
-  const seed: Data = { ...EMPTY, fixtures, planograms: [seedPlanogram(fixtures[0])] };
-  markSeed(seed);
+  const seed: Data = { ...EMPTY, fixtures, planograms: scope === 'local' ? [seedPlanogram(fixtures[0])] : [] };
+  markSeed(seed, scope);
   return seed;
 }
 
 export const useStore = create<State>((set, get) => ({
   ...EMPTY,
+  me: null,
+  scope: 'local',
+  refs: null,
   toast: null,
   sync: { status: 'off', at: null, error: null },
   texRev: 0,
@@ -190,7 +205,7 @@ export const dataOf = (s: Data): Data => ({
 // иначе пустое состояние затёрло бы сохранённое
 let hydrated = false;
 function persist(s: State) {
-  writeData(dataOf(s)).catch(() => s.notify('Не удалось сохранить в браузере: место закончилось. Выгрузите JSON и удалите старые сверки'));
+  return writeData(s.scope, dataOf(s)).catch(() => s.notify('Не удалось сохранить в браузере: место закончилось. Выгрузите JSON и удалите старые сверки'));
 }
 let timer: ReturnType<typeof setTimeout> | undefined;
 useStore.subscribe(s => {
@@ -199,26 +214,94 @@ useStore.subscribe(s => {
   timer = setTimeout(() => persist(s), 300);
 });
 
-// Загрузка при старте: main.tsx рисует приложение после неё
-export async function hydrate() {
-  useStore.setState(normalize(await readData()));
+// Кто вошёл, запомненный на случай работы без сети: только имя, роль и клиент, без секретов
+const ME_KEY = 'planogram-studio.me';
+const rememberMe = (me: Me | null) => { try { if (me) localStorage.setItem(ME_KEY, JSON.stringify(me)); else localStorage.removeItem(ME_KEY); } catch { /* не критично */ } };
+const rememberedMe = (): Me | null => { try { return JSON.parse(localStorage.getItem(ME_KEY) ?? 'null'); } catch { return null; } };
+
+// Открыть пространство: дописать текущее, прочитать новое, запустить синхронизацию
+async function openScope(me: Me | null) {
+  const was = hydrated ? useStore.getState().settings : null;   // настройки браузера общие для всех пространств
+  if (hydrated) { clearTimeout(timer); await persist(useStore.getState()); }
+  await syncIdle();
+  hydrated = false;
+  const scope = scopeOf(me);
+  const data = normalize(await readData(scope), scope);
+  useStore.setState({ ...data, settings: was ?? data.settings, me, scope, refs: null, sync: { status: me ? 'idle' : 'off', at: null, error: null } });
   hydrated = true;
   persist(useStore.getState());   // примеры при первом запуске тоже сохраняем
+  rememberMe(me);
+  setAuthor(me?.name);
   refreshGallery();
-  if (useStore.getState().settings.sync) scheduleSync(300);
+  loadRefs();
+  if (me) scheduleSync(300);
 }
 
-// ---- хранение в IR-сервисе: проход при включении, через 2 с после правки и раз в 15 с ----
-let syncing = false, again = false;
+// Загрузка при старте: main.tsx рисует приложение после неё. Нет сети — работаем в
+// пространстве последнего входа, синхронизация догонит; сессия кончилась — без входа
+export async function hydrate() {
+  let me: Me | null;
+  try { me = await fetchMe(); }
+  catch (e) { me = e instanceof ApiError && e.status === 0 ? rememberedMe() : null; }
+  await openScope(me);
+}
+
+export async function signIn(loginName: string, password: string) {
+  const me = await apiLogin(loginName, password);
+  await openScope(me);
+  return me;
+}
+
+export async function signOut() {
+  try { await apiLogout(); } catch { /* сессия уже кончилась — всё равно выходим */ }
+  await openScope(null);
+}
+
+export async function changeClient(client: string) {
+  const me = await apiSwitch(client);
+  await openScope(me);
+}
+
+// Данные, накопленные без входа, — в пространство клиента: чего там нет по id, то добавится
+export async function importLocal(): Promise<number> {
+  const local = normalize(await readData('local'), 'local-import');
+  let n = 0;
+  useStore.setState(s => {
+    const add = <T extends { id: string }>(mine: T[], from: T[]) => {
+      const have = new Set(mine.map(x => x.id));
+      const extra = from.filter(x => !have.has(x.id));
+      n += extra.length;
+      return [...mine, ...extra];
+    };
+    return {
+      fixtures: add(s.fixtures, local.fixtures), planograms: add(s.planograms, local.planograms), snapshots: add(s.snapshots, local.snapshots),
+      clusters: add(s.clusters, local.clusters), custom: add(s.custom, local.custom), runs: add(s.runs, local.runs),
+      patches: { ...local.patches, ...s.patches },
+    };
+  });
+  return n;
+}
+
+// ---- хранение на сервере: проход после входа, через 2 с после правки и раз в 15 с ----
+let syncing: Promise<void> | null = null, again = false;
 let syncTimer: ReturnType<typeof setTimeout> | undefined;
-export async function runSync() {
+const syncIdle = () => syncing ?? Promise.resolve();
+export function runSync(): Promise<void> {
   const s = useStore.getState();
-  if (!s.settings.sync) { useStore.setState({ sync: { status: 'off', at: null, error: null } }); return; }
-  if (syncing) { again = true; return; }
-  syncing = true;
+  if (!s.me) { useStore.setState({ sync: { status: 'off', at: null, error: null } }); return Promise.resolve(); }
+  if (syncing) { again = true; return syncing; }
+  syncing = pass(s.scope).finally(() => {
+    syncing = null;
+    if (again) { again = false; scheduleSync(500); }
+  });
+  return syncing;
+}
+async function pass(scope: string) {
+  const s = useStore.getState();
   useStore.setState(st => ({ sync: { ...st.sync, status: 'syncing' } }));
   try {
-    const r = await syncOnce(s.settings, () => useStore.getState());
+    const r = await syncOnce({}, scope, () => useStore.getState());
+    if (useStore.getState().scope !== scope) return;   // пока шёл проход, сменили клиента
     useStore.setState(st => {
       const d = applyRemote(st, [...r.applied, ...r.dropped.map(x => ({ ...x, body: null, deleted: true }))]);
       return { ...d, planograms: [...r.copies, ...d.planograms], lost: [...r.lost, ...st.lost].slice(0, 100), sync: { status: 'idle', at: now(), error: null } };
@@ -228,27 +311,27 @@ export async function runSync() {
       s.notify(`На сервере правили те же документы (${r.conflicts.length}): взята серверная версия${parts.length ? `; ваши правки: ${parts.join(', ')}` : ', подтверждения сверок объединены'}`);
     }
   } catch (e) {
+    if (e instanceof ApiError && e.status === 401) {   // сессия кончилась: дальше без сервера, пока не войдут снова
+      useStore.setState({ sync: { status: 'error', at: now(), error: 'Сессия закончилась: войдите снова' } });
+      return;
+    }
     useStore.setState({ sync: { status: 'error', at: now(), error: (e as Error).message } });
-  } finally {
-    syncing = false;
-    if (again) { again = false; scheduleSync(500); }
   }
 }
 export const scheduleSync = (ms = 2000) => { clearTimeout(syncTimer); syncTimer = setTimeout(runSync, ms); };
-export const resetSync = () => { resetSyncMeta(); scheduleSync(0); };
+export const resetSync = () => { resetSyncMeta(useStore.getState().scope); scheduleSync(0); };
 
 const DOC_KEYS = ['fixtures', 'planograms', 'snapshots', 'clusters', 'patches', 'custom', 'runs'] as const;
 useStore.subscribe((s, prev) => {
-  if (!hydrated) return;
+  if (!hydrated || s.scope !== prev.scope) return;
   if (s.settings !== prev.settings) {
-    const conn = s.settings.apiBase !== prev.settings.apiBase || s.settings.apiKey !== prev.settings.apiKey;
-    if (s.settings.sync !== prev.settings.sync || (s.settings.sync && conn)) scheduleSync(0);
-    if (conn || s.settings.galleryTextures !== prev.settings.galleryTextures || s.settings.sync !== prev.settings.sync) refreshGallery();
+    if (s.settings.galleryTextures !== prev.settings.galleryTextures) refreshGallery();
+    if (s.settings.tech !== prev.settings.tech) loadRefs();
     return;
   }
-  if (s.settings.sync && DOC_KEYS.some(k => s[k] !== prev[k])) scheduleSync();
+  if (s.me && DOC_KEYS.some(k => s[k] !== prev[k])) scheduleSync();
 });
-setInterval(() => { if (hydrated && useStore.getState().settings.sync) runSync(); }, 15_000);
+setInterval(() => { if (hydrated && useStore.getState().me) runSync(); }, 15_000);
 
 // ---- фото эталонов как текстуры ----
 setGalleryListener(() => { clearTextures(); clearThumbs(); useStore.setState(st => ({ texRev: st.texRev + 1 })); });
@@ -256,25 +339,37 @@ let galleryTimer: ReturnType<typeof setTimeout> | undefined;
 function refreshGallery() {
   clearTimeout(galleryTimer);
   galleryTimer = setTimeout(() => {
-    const st = useStore.getState().settings;
-    // фото берём у того же сервиса, где хранится Studio: без подключения — рисованные пачки
-    const on = st.galleryTextures && st.sync;
+    const { settings, me } = useStore.getState();
+    // фото берём у того же сервера, где хранится Studio: без входа — рисованные пачки
+    const on = settings.galleryTextures && !!me;
     setPhotos(on);
-    connectGallery(on ? st : null);
+    connectGallery(on ? {} : null);
   }, 400);
 }
 
+// Сколько эталонов у метки — только инженеру: в сборке сайта этих чисел нет
+function loadRefs() {
+  const { me, settings } = useStore.getState();
+  if (me?.role !== 'admin' || !settings.tech) { useStore.setState({ refs: null }); return; }
+  api<{ labels: Record<string, number> }>({}, '/v1/gallery/refs')
+    .then(r => useStore.setState({ refs: r.labels }))
+    .catch(() => useStore.setState({ refs: null }));
+}
+
 // Технические блоки IR видны только инженеру; обычный пользователь их не видит
-export const useTech = () => useStore(s => s.settings.tech);
+export const useTech = () => useStore(s => s.settings.tech && s.me?.role === 'admin');
+// Утверждать и публиковать: руководитель и инженер. Без входа публиковать некуда, а утвердить можно
+export const useCanApprove = () => useStore(s => !s.me || s.me.role !== 'editor');
 
 export function useCatalog() {
   const patches = useStore(s => s.patches);
   const custom = useStore(s => s.custom);
+  const refs = useStore(s => s.refs);
   return useMemo(() => {
-    const list = buildCatalog(patches, custom);
+    const list = buildCatalog(patches, custom, refs);
     const byId = new Map(list.map(s => [s.id, s]));
     return { list, byId, get: (id: string) => byId.get(id) };
-  }, [patches, custom]);
+  }, [patches, custom, refs]);
 }
 
 // ---- хеш-маршруты: #/planograms, #/planogram/<id>, #/fixtures, #/fixture/<id>, #/catalog, #/compare/<id> ----

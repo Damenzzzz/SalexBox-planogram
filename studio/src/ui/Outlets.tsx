@@ -14,7 +14,6 @@ export function Outlets() {
   const clusters = useStore(s => s.clusters);
   const planograms = useStore(s => s.planograms);
   const snapshots = useStore(s => s.snapshots);
-  const settings = useStore(s => s.settings);
   const { saveCluster, deleteCluster, notify } = useStore.getState();
   const [confirm, setConfirm] = useState<string | null>(null);
   const [live, setLive] = useState<Assignment[] | null>(null);
@@ -23,10 +22,11 @@ export function Outlets() {
 
   const load = useCallback(async () => {
     setLiveErr(null);
-    try { setLive((await api<{ items: Assignment[] }>(settings, '/v1/assignments')).items); }
+    try { setLive((await api<{ items: Assignment[] }>({}, '/v1/assignments')).items); }
     catch (e) { setLive(null); setLiveErr((e as Error).message); }
-  }, [settings]);
-  useEffect(() => { if (settings.sync) load(); }, [settings.sync, load]);
+  }, []);
+  const me = useStore(s => s.me);
+  useEffect(() => { if (me) load(); else setLive(null); }, [me, load]);
 
   // имя в IR → планограмма Studio: текущая версия или сохранённая (после публикации могли начать следующую)
   const byName = useMemo(() => {

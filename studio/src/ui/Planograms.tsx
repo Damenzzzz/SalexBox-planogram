@@ -154,7 +154,6 @@ function NewPlanogram({ onClose, onCreate }: { onClose: () => void; onCreate: (p
 function DraftModal({ onClose, onCreate }: { onClose: () => void; onCreate: (p: Planogram) => void }) {
   const fixtures = useStore(s => s.fixtures);
   const { byId } = useCatalog();
-  const settings = useStore(s => s.settings);
   const { notify } = useStore.getState();
   const [tpl, setTpl] = useState(fixtures[0]?.id ?? '');
   const [name, setName] = useState('Черновик по фото');
@@ -173,7 +172,7 @@ function DraftModal({ onClose, onCreate }: { onClose: () => void; onCreate: (p: 
     try {
       if (f.name.endsWith('.json')) { const doc = JSON.parse(await f.text()); make((doc.result ?? doc) as PhotoResultIn); return; }
       setBusy('Отправляю фото в IR…');
-      const { result } = await analyzePhoto(settings, f, {}, setBusy);
+      const { result } = await analyzePhoto({}, f, {}, setBusy);
       make({ ...(result as PhotoResultIn), photo: f.name });
     } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   };

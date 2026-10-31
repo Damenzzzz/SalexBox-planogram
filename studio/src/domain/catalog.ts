@@ -98,23 +98,24 @@ export function makeLook(brand: string, model: string): Look {
   };
 }
 
-export function baseCatalog(): Sku[] {
-  return gallery.labels.map(({ label, refs }) => {
+// refs — эталонов на метку с сервера (только инженеру); без них 0: в сборке сайта этих чисел нет
+export function baseCatalog(refs: Record<string, number> | null = null): Sku[] {
+  return gallery.labels.map(({ label }) => {
     const i = label.indexOf('/');
     const brand = label.slice(0, i), model = label.slice(i + 1);
     const { format, guessed } = formatFromLabel(model, brand);
     const f = FORMATS[format];
     return {
       id: label, label, brand, name: model, maker: makerOf(brand), segment: segmentOf(brand), format,
-      w: f.w, h: f.h, d: f.d, measured: false, formatGuessed: guessed, refs, price: null, ean: '',
+      w: f.w, h: f.h, d: f.d, measured: false, formatGuessed: guessed, refs: refs?.[label] ?? 0, price: null, ean: '',
       look: makeLook(brand, model), custom: false,
     };
   });
 }
 
 // Каталог = галерея + правки пользователя + свои SKU
-export function buildCatalog(patches: Record<string, SkuPatch>, custom: Sku[]): Sku[] {
-  const list = baseCatalog().map(s => {
+export function buildCatalog(patches: Record<string, SkuPatch>, custom: Sku[], refs: Record<string, number> | null = null): Sku[] {
+  const list = baseCatalog(refs).map(s => {
     const p = patches[s.id];
     if (!p) return s;
     const next = { ...s, ...p };
