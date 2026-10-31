@@ -3,7 +3,6 @@ import { analyse } from '../domain/checks';
 import { priceList } from '../domain/exports';
 import { MAKERS, MAKER_ORDER } from '../domain/formats';
 import { sortedShelves } from '../domain/geometry';
-import { irName } from '../domain/irExport';
 import { layoutRows } from '../domain/versions';
 import { drawScene, sceneSize } from '../render/scene';
 import { useCatalog, useStore } from '../store';
@@ -40,7 +39,7 @@ export function PrintView({ id }: { id: string }) {
       <header className="print-head">
         <div>
           <h1>{p.name}</h1>
-          <p>Версия {p.version} · {STATUS_NAME[p.status]}{p.publishedAs ? ` · ${p.publishedAs}` : ''} · {new Date().toLocaleDateString('ru-RU')}</p>
+          <p>Версия {p.version} · {STATUS_NAME[p.status]} · {new Date().toLocaleDateString('ru-RU')}</p>
         </div>
         <div className="print-meta">
           <span>Шкаф <b>{p.fixture.code}</b> · {p.fixture.name}</span>
@@ -53,7 +52,7 @@ export function PrintView({ id }: { id: string }) {
         <div className="print-tables">
           {shelves.map(no => (
             <table key={no} className="table print-table">
-              <thead><tr><th colSpan={4}>Полка {no} снизу · IR-ряд {rows.find(r => r.shelf === no)?.irRow}</th></tr></thead>
+              <thead><tr><th colSpan={4}>Полка {no} снизу</th></tr></thead>
               <tbody>{rows.filter(r => r.shelf === no).map(r => (
                 <tr key={`${r.shelf}-${r.pos}`}><td className="mono">{r.pos}</td><td>{r.name}</td><td>{r.format}</td><td className="mono">{r.facings} ф.</td></tr>
               ))}</tbody>
@@ -63,7 +62,7 @@ export function PrintView({ id }: { id: string }) {
           {Object.keys(p.rules.shareTargets).length > 0 && (
             <p><b>Доли по контракту:</b> {MAKER_ORDER.filter(m => p.rules.shareTargets[m]).map(m => `${MAKERS[m]} ≥ ${Math.round(p.rules.shareTargets[m]! * 100)}% (сейчас ${a.total ? Math.round((a.byMaker[m] ?? 0) / a.total * 100) : 0}%)`).join(', ')}</p>
           )}
-          <p className="hint">Полки считаются снизу; IR-ряд — сверху, как в сверке. Имя для IR: {p.publishedAs ?? irName(p)}.</p>
+          <p className="hint">Полки считаются снизу. Версия {p.version}.</p>
         </div>
       </div>
     </div>
