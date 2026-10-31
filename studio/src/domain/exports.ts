@@ -21,7 +21,7 @@ export function planogramSheets(p: Planogram, get: Get): Sheet[] {
 
   const summary: Cell[][] = [
     ['Поле', 'Значение'],
-    ['Планограмма', p.name], ['Версия', p.version], ['Статус', STATUS[p.status]], ['Имя в IR', p.publishedAs ?? irName(p)],
+    ['Планограмма', p.name], ['Версия', p.version], ['Статус', STATUS[p.status]], ['Код версии', p.publishedAs ?? irName(p)],
     ['Рынок', p.market], ['Клиент', p.client], ['Точка', p.outlet],
     ['Шкаф', `${fx.code} · ${fx.name}`], ['Размер, мм', `${fx.w}×${fx.h}×${fx.d}`], ['Полок', sortedShelves(fx).length], ['Ширина полки, мм', innerW(fx)],
     ['Фейсингов', a.total], ['Заполнение', `${Math.round(a.fill * 100)}%`], ['SKU', a.placed.length],

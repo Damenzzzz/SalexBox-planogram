@@ -4,7 +4,7 @@ import { galleryCrops, mapReport, memoryOf, rowKey, rowsFromRun, runStats, slotK
 import { analyzePhoto } from '../domain/api';
 import { runsSheet } from '../domain/exports';
 import { shelvesTopDown, uid } from '../domain/geometry';
-import { irLabel, irName, toIrYaml } from '../domain/irExport';
+import { fileName, irLabel, toIrYaml } from '../domain/irExport';
 import type { IrPlanogramReport, IrRun, IrSlot, Planogram, SlotStatus, Sku } from '../domain/types';
 import { nextVersion } from '../domain/versions';
 import { XLSX_TYPE, downloadBytes, xlsx } from '../domain/xlsx';
@@ -169,7 +169,7 @@ function CompareView({ p }: { p: Planogram }) {
           {runs.length > 0 && (
             <section className="section">
               <div className="section-head"><h3>Память сверок · {runs.length}</h3>
-                <button className="btn btn-sm" onClick={() => downloadBytes(`${irName(p)}-сверки.xlsx`, xlsx([runsSheet(p, runs, get)]), XLSX_TYPE)}><Icon name="download" size={15} />Excel</button></div>
+                <button className="btn btn-sm" onClick={() => downloadBytes(`${fileName(p)} сверки.xlsx`, xlsx([runsSheet(p, runs, get)]), XLSX_TYPE)}><Icon name="download" size={15} />Excel</button></div>
               {tech && <MemorySummary runs={runs} get={get} />}
               <div className="runs">
                 {runs.map(r => {

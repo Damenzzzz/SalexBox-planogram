@@ -11,7 +11,12 @@ const TR: Record<string, string> = {
 export const slug = (s: string) =>
   [...s.toLowerCase()].map(ch => TR[ch] ?? ch).join('').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-export const irName = (p: Planogram) => `plg-${slug(p.name) || p.id}-v${p.version}`;
+// Имя версии в IR: читаемое название + хвост id. Из одного названия две разные планограммы
+// с одинаковым именем столкнулись бы при публикации; id у планограммы свой навсегда
+export const irName = (p: Planogram) => `plg-${slug(p.name).slice(0, 40).replace(/-$/, '') || 'planogram'}-${p.id.replace(/^plg_/, '').slice(0, 6)}-v${p.version}`;
+
+// Имя файла для выгрузок человеку: название и версия, без служебного хвоста
+export const fileName = (p: Planogram) => `${p.name.replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'планограмма'} v${p.version}`;
 
 // Метка, которую увидит align.py: для SKU без галереи — «Бренд/Название»
 export const irLabel = (s: Sku | undefined, id: string) => (s ? s.label ?? `${s.brand}/${s.name}` : id);

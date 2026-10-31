@@ -4,7 +4,7 @@ import { FORMATS, FORMAT_ORDER, MAKERS, MAKER_ORDER, SEGMENTS } from '../domain/
 import { clearanceOf, innerW, laneOf, packFloor, packsDeep, shelfIndex, shelvesTopDown, uid, usedWidth } from '../domain/geometry';
 import { planogramSheets } from '../domain/exports';
 import { download, toBundle } from '../domain/io';
-import { irName, toIrYaml, zonesOf } from '../domain/irExport';
+import { fileName, irName, toIrYaml, zonesOf } from '../domain/irExport';
 import type { AlignCosts, FormatId, Maker, Placement, Planogram, Sku } from '../domain/types';
 import { needsNewVersion, nextVersion } from '../domain/versions';
 import { XLSX_TYPE, downloadBytes, xlsx } from '../domain/xlsx';
@@ -260,14 +260,14 @@ function EditorView({ p }: { p: Planogram }) {
         ]} />
         <Menu label="Выгрузить" icon="download" items={[
           ...(tech ? [{ label: 'YAML для IR', icon: 'file', hint: 'файл планограммы для распознавания', onClick: () => download(`${irName(p)}.yaml`, toIrYaml(p, get), 'text/yaml') }] : []),
-          { label: 'Excel', icon: 'grid', hint: 'раскладка, сводка, правила, проверки', onClick: () => downloadBytes(`${irName(p)}.xlsx`, xlsx(planogramSheets(p, get)), XLSX_TYPE) },
+          { label: 'Excel', icon: 'grid', hint: 'раскладка, сводка, правила, проверки', onClick: () => downloadBytes(`${fileName(p)}.xlsx`, xlsx(planogramSheets(p, get)), XLSX_TYPE) },
           { label: 'Картинка PNG', icon: 'image', onClick: () => exportPng(p, get, settings.warn) },
           { label: 'Печать и PDF', icon: 'print', hint: 'схема для мерчендайзера', onClick: () => window.open(`#/print/${p.id}`, '_blank') },
           { label: 'Прайс-лист', icon: 'print', hint: 'закрытая выкладка, только текст', onClick: () => window.open(`#/pricelist/${p.id}`, '_blank') },
           null,
           { label: 'JSON Studio', icon: 'download', onClick: () => {
             const used = [...new Set(Object.values(p.rows).flat().map(q => q.sku))].map(get).filter((s): s is Sku => !!s);
-            download(`${irName(p)}.json`, JSON.stringify(toBundle([p], [], used), null, 2));
+            download(`${fileName(p)}.json`, JSON.stringify(toBundle([p], [], used), null, 2));
           } },
         ]} />
         <button className="btn btn-primary" onClick={() => go(`compare/${p.id}`)}><Icon name="scan" />Сверка</button>
@@ -598,7 +598,7 @@ function exportPng(p: Planogram, get: (id: string) => Sku | undefined, warn: boo
     if (!b) return;
     const url = URL.createObjectURL(b);
     const a = document.createElement('a');
-    a.href = url; a.download = `${irName(p)}.png`;
+    a.href = url; a.download = `${fileName(p)}.png`;
     document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, 'image/png');
