@@ -1,10 +1,14 @@
 import { evenShelves, uid } from './geometry';
 import type { AlignCosts, Fixture, Planogram } from './types';
 
+// mismatch 1.5: чужая пачка на месте дороже, чем пропущенная пустота плюс пропавшая ожидаемая.
+// При 1.0 пачка, сдвинутая пустотой, засчитывалась чужой (проверено на фото 0051)
 export const DEFAULT_COSTS: AlignCosts = {
-  mismatch: 1.0, missing: 1.0, missing_gap: 0.5, extra: 1.0,
+  mismatch: 1.5, missing: 1.0, missing_gap: 0.5, extra: 1.0,
   gap_edge: 0.0, gap_inside: 0.8, brand_only: 0.3, position: 0.4, row_skip: 0.6,
 };
+const OLD_DEFAULT_COSTS: AlignCosts = { ...DEFAULT_COSTS, mismatch: 1.0 };
+const sameCosts = (a: AlignCosts, b: AlignCosts) => (Object.keys(b) as (keyof AlignCosts)[]).every(k => a[k] === b[k]);
 
 const now = () => new Date().toISOString();
 
@@ -55,12 +59,16 @@ export function newPlanogram(template: Fixture, name: string): Planogram {
 
 // Планограммы из прошлых версий Studio, импорта и сервера: недостающие поля — по умолчанию
 export function normalizePlanogram(p: Planogram): Planogram {
+  let costs = { ...DEFAULT_COSTS, ...(p.ir?.costs ?? {}) };
+  // старые стоимости по умолчанию — на новые, но только пока планограмма не утверждена:
+  // у утверждённой и опубликованной версии YAML неизменен
+  if ((p.status === 'draft' || p.status === 'review') && sameCosts(costs, OLD_DEFAULT_COSTS)) costs = { ...DEFAULT_COSTS };
   return {
     ...p,
     journal: p.journal ?? [],
     assign: { clusters: p.assign?.clusters ?? [], outlets: p.assign?.outlets ?? [] },
     publishedAs: p.publishedAs ?? null,
-    ir: { twins: p.ir?.twins ?? [], skipShelves: p.ir?.skipShelves ?? [], costs: { ...DEFAULT_COSTS, ...(p.ir?.costs ?? {}) } },
+    ir: { twins: p.ir?.twins ?? [], skipShelves: p.ir?.skipShelves ?? [], costs },
     rules: { mustHave: p.rules?.mustHave ?? [], minFacings: p.rules?.minFacings ?? {}, shareTargets: p.rules?.shareTargets ?? {} },
   };
 }

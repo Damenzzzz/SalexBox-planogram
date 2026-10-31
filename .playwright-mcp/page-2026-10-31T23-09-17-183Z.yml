@@ -1,0 +1,598 @@
+- generic [ref=f30e3]:
+  - banner [ref=f30e4]:
+    - link "Planogram Studio Табак" [ref=f30e5] [cursor=pointer]:
+      - /url: "#/planograms"
+      - text: Planogram Studio
+      - generic [ref=f30e14]: Табак
+    - navigation "Разделы" [ref=f30e15]:
+      - link "Планограммы" [ref=f30e16] [cursor=pointer]:
+        - /url: "#/planograms"
+      - link "Шкафы" [ref=f30e19] [cursor=pointer]:
+        - /url: "#/fixtures"
+      - link "Каталог SKU" [ref=f30e22] [cursor=pointer]:
+        - /url: "#/catalog"
+      - link "Сверка IR" [ref=f30e25] [cursor=pointer]:
+        - /url: "#/compare"
+      - link "Точки" [ref=f30e28] [cursor=pointer]:
+        - /url: "#/outlets"
+      - link "Мониторинг" [ref=f30e31] [cursor=pointer]:
+        - /url: "#/monitor"
+    - link "Помощь" [ref=f30e34] [cursor=pointer]:
+      - /url: "#/help"
+    - button "Исламбек" [ref=f30e38] [cursor=pointer]
+  - main [ref=f30e42]:
+    - generic [ref=f30e43]:
+      - generic [ref=f30e44]:
+        - generic [ref=f30e45]:
+          - link "К списку планограмм" [ref=f30e46] [cursor=pointer]:
+            - /url: "#/planograms"
+          - generic [ref=f30e49]: С1-96-170
+          - textbox "Название планограммы" [ref=f30e50]: Тест 0051 · по фото
+          - generic [ref=f30e51]: Черновик
+          - generic [ref=f30e52]: версия 1
+          - button "На согласование" [ref=f30e53] [cursor=pointer]
+        - button "Отменить" [disabled] [ref=f30e56]
+        - button "Повторить" [disabled] [ref=f30e59]
+        - button "Авто" [ref=f30e64] [cursor=pointer]:
+          - text: Авто
+          - generic [aria-hidden] [ref=f30e67]: ▾
+        - button "Выгрузить" [ref=f30e69] [cursor=pointer]:
+          - text: Выгрузить
+          - generic [aria-hidden] [ref=f30e72]: ▾
+        - button "Сверка" [ref=f30e73] [cursor=pointer]
+      - generic [ref=f30e76]:
+        - complementary [ref=f30e77]:
+          - generic [ref=f30e78]:
+            - heading "Каталог · 265" [level=2] [ref=f30e79]
+            - searchbox "Поиск SKU" [ref=f30e80]
+            - group "Производитель" [ref=f30e81]:
+              - button "Все" [pressed] [ref=f30e82] [cursor=pointer]
+              - button "KT&G" [ref=f30e83] [cursor=pointer]
+              - button "JTI" [ref=f30e84] [cursor=pointer]
+              - button "PMI" [ref=f30e85] [cursor=pointer]
+              - button "BAT" [ref=f30e86] [cursor=pointer]
+              - button "Imperial" [ref=f30e87] [cursor=pointer]
+              - button "Другие" [ref=f30e88] [cursor=pointer]
+            - generic [ref=f30e89]:
+              - combobox "Формат" [ref=f30e90]:
+                - option "Любой формат" [selected]
+                - option "King Size"
+                - option "King Size 100"
+                - option "King Size Slim"
+                - option "Compact"
+                - option "Compact 100"
+                - option "Nano"
+                - option "Demi"
+                - option "Super Slims"
+                - option "Mini"
+                - option "Блистер"
+              - generic [ref=f30e91] [cursor=pointer]:
+                - checkbox "на шкафу" [ref=f30e92]
+                - text: на шкафу
+          - generic [ref=f30e93]:
+            - 'list "SKU: перетащите на полку или нажмите плюс" [ref=f30e94]':
+              - listitem [ref=f30e95]:
+                - generic [ref=f30e96]:
+                  - generic "Blooming/Blooming Blue SS" [ref=f30e97]: Blooming Blue SS
+                  - generic [ref=f30e98]:
+                    - text: Другие · Super Slims
+                    - generic [ref=f30e99]: IR 1 эт.
+                - button "Добавить Blooming Blue SS на полку 3" [ref=f30e100] [cursor=pointer]
+              - listitem [ref=f30e103]:
+                - generic [ref=f30e104]:
+                  - generic "Blooming/Blooming Silver SS" [ref=f30e105]: Blooming Silver SS
+                  - generic [ref=f30e106]:
+                    - text: Другие · Super Slims
+                    - generic [ref=f30e107]: IR 1 эт.
+                - button "Добавить Blooming Silver SS на полку 3" [ref=f30e108] [cursor=pointer]
+              - listitem [ref=f30e111]:
+                - generic [ref=f30e112]:
+                  - generic "Blooming/Blooming Violet On SS" [ref=f30e113]: Blooming Violet On SS
+                  - generic [ref=f30e114]:
+                    - text: Другие · Super Slims
+                    - generic [ref=f30e115]: IR 1 эт.
+                - button "Добавить Blooming Violet On SS на полку 3" [ref=f30e116] [cursor=pointer]
+              - listitem [ref=f30e119]:
+                - generic [ref=f30e120]:
+                  - generic "Bohem/Bohem Aqva Blue SS" [ref=f30e121]: Bohem Aqva Blue SS
+                  - generic [ref=f30e122]:
+                    - text: KT&G · Super Slims
+                    - generic [ref=f30e123]: IR 1 эт.
+                - button "Добавить Bohem Aqva Blue SS на полку 3" [ref=f30e124] [cursor=pointer]
+              - listitem [ref=f30e127]:
+                - generic [ref=f30e128]:
+                  - generic "Bohem/Bohem Cavana Brown Green Demi" [ref=f30e129]: Bohem Cavana Brown Green Demi
+                  - generic [ref=f30e130]:
+                    - text: KT&G · Demi
+                    - generic [ref=f30e131]: IR 1 эт.
+                - button "Добавить Bohem Cavana Brown Green Demi на полку 3" [ref=f30e132] [cursor=pointer]
+              - listitem [ref=f30e135]:
+                - generic [ref=f30e136]:
+                  - generic "Bohem/Bohem Cavana Demi" [ref=f30e137]: Bohem Cavana Demi
+                  - generic [ref=f30e138]:
+                    - text: KT&G · Demi
+                    - generic [ref=f30e139]: IR 1 эт.
+                - button "Добавить Bohem Cavana Demi на полку 3" [ref=f30e140] [cursor=pointer]
+              - listitem [ref=f30e143]:
+                - generic [ref=f30e144]:
+                  - generic "Bohem/Bohem Cavana Gold Demi" [ref=f30e145]: Bohem Cavana Gold Demi
+                  - generic [ref=f30e146]:
+                    - text: KT&G · Demi
+                    - generic [ref=f30e147]: IR 1 эт.
+                - button "Добавить Bohem Cavana Gold Demi на полку 3" [ref=f30e148] [cursor=pointer]
+              - listitem [ref=f30e151]:
+                - generic [ref=f30e152]:
+                  - generic "Bohem/Bohem Cavana Origin Blue" [ref=f30e153]: Bohem Cavana Origin Blue
+                  - generic [ref=f30e154]:
+                    - text: KT&G · King Size
+                    - generic [ref=f30e155]: IR 1 эт.
+                - button "Добавить Bohem Cavana Origin Blue на полку 3" [ref=f30e156] [cursor=pointer]
+              - listitem [ref=f30e159]:
+                - generic [ref=f30e160]:
+                  - generic "Bohem/Bohem Cavana Origin Silver" [ref=f30e161]: Bohem Cavana Origin Silver
+                  - generic [ref=f30e162]:
+                    - text: KT&G · King Size
+                    - generic [ref=f30e163]: IR 1 эт.
+                - button "Добавить Bohem Cavana Origin Silver на полку 3" [ref=f30e164] [cursor=pointer]
+              - listitem [ref=f30e167]:
+                - generic [ref=f30e168]:
+                  - generic "Bohem/Bohem Cavana Presso Demi" [ref=f30e169]: Bohem Cavana Presso Demi
+                  - generic [ref=f30e170]:
+                    - text: KT&G · Demi
+                    - generic [ref=f30e171]: IR 1 эт.
+                - button "Добавить Bohem Cavana Presso Demi на полку 3" [ref=f30e172] [cursor=pointer]
+              - listitem [ref=f30e175]:
+                - generic [ref=f30e176]:
+                  - generic "Bohem/Bohem Cigar Aroma Mini" [ref=f30e177]: Bohem Cigar Aroma Mini
+                  - generic [ref=f30e178]:
+                    - text: KT&G · Mini
+                    - generic [ref=f30e179]: IR 1 эт.
+                - button "Добавить Bohem Cigar Aroma Mini на полку 3" [ref=f30e180] [cursor=pointer]
+              - listitem [ref=f30e183]:
+                - generic [ref=f30e184]:
+                  - generic "Bohem/Bohem Cigar Original Blend Mini" [ref=f30e185]: Bohem Cigar Original Blend Mini
+                  - generic [ref=f30e186]:
+                    - text: KT&G · Mini
+                    - generic [ref=f30e187]: IR 2 эт.
+                - button "Добавить Bohem Cigar Original Blend Mini на полку 3" [ref=f30e188] [cursor=pointer]
+              - listitem [ref=f30e191]:
+                - generic [ref=f30e192]:
+                  - generic "Bohem/Bohem Classy Blue Demi" [ref=f30e193]: Bohem Classy Blue Demi
+                  - generic [ref=f30e194]:
+                    - text: KT&G · Demi
+                    - generic [ref=f30e195]: IR 1 эт.
+                - button "Добавить Bohem Classy Blue Demi на полку 3" [ref=f30e196] [cursor=pointer]
+              - listitem [ref=f30e199]:
+                - generic [ref=f30e200]:
+                  - generic "Bohem/Bohem Libre Brown KS" [ref=f30e201]: Bohem Libre Brown KS
+                  - generic [ref=f30e202]:
+                    - text: KT&G · King Size
+                    - generic [ref=f30e203]: IR 1 эт.
+                - button "Добавить Bohem Libre Brown KS на полку 3" [ref=f30e204] [cursor=pointer]
+              - listitem [ref=f30e207]:
+                - generic [ref=f30e208]:
+                  - generic "Bohem/Bohem Libre Classic Blue" [ref=f30e209]: Bohem Libre Classic Blue
+                  - generic [ref=f30e210]:
+                    - text: KT&G · King Size
+                    - generic [ref=f30e211]: IR 1 эт.
+                - button "Добавить Bohem Libre Classic Blue на полку 3" [ref=f30e212] [cursor=pointer]
+              - listitem [ref=f30e215]:
+                - generic [ref=f30e216]:
+                  - generic "Bohem/Bohem Libre Classic Silver" [ref=f30e217]: Bohem Libre Classic Silver
+                  - generic [ref=f30e218]:
+                    - text: KT&G · King Size
+                    - generic [ref=f30e219]: IR 1 эт.
+                - button "Добавить Bohem Libre Classic Silver на полку 3" [ref=f30e220] [cursor=pointer]
+              - listitem [ref=f30e223]:
+                - generic [ref=f30e224]:
+                  - generic "Bohem/Bohem Libre Deep Brown Demi" [ref=f30e225]: Bohem Libre Deep Brown Demi
+                  - generic [ref=f30e226]:
+                    - text: KT&G · Demi
+                    - generic [ref=f30e227]: IR 1 эт.
+                - button "Добавить Bohem Libre Deep Brown Demi на полку 3" [ref=f30e228] [cursor=pointer]
+              - listitem [ref=f30e231]:
+                - generic [ref=f30e232]:
+                  - generic "Bohem/Bohem Libre Green Demi" [ref=f30e233]: Bohem Libre Green Demi
+                  - generic [ref=f30e234]:
+                    - text: KT&G · Demi
+                    - generic [ref=f30e235]: IR 1 эт.
+                - button "Добавить Bohem Libre Green Demi на полку 3" [ref=f30e236] [cursor=pointer]
+              - listitem [ref=f30e239]:
+                - generic [ref=f30e240]:
+                  - generic "Bohem/Bohem Libre KS" [ref=f30e241]: Bohem Libre KS
+                  - generic [ref=f30e242]:
+                    - text: KT&G · King Size
+                    - generic [ref=f30e243]: IR 1 эт.
+                - button "Добавить Bohem Libre KS на полку 3" [ref=f30e244] [cursor=pointer]
+              - listitem [ref=f30e247]:
+                - generic [ref=f30e248]:
+                  - generic "Bohem/Bohem Rich Brown SS" [ref=f30e249]: Bohem Rich Brown SS
+                  - generic [ref=f30e250]:
+                    - text: KT&G · Super Slims
+                    - generic [ref=f30e251]: IR 1 эт.
+                - button "Добавить Bohem Rich Brown SS на полку 3" [ref=f30e252] [cursor=pointer]
+              - listitem [ref=f30e255]:
+                - generic [ref=f30e256]:
+                  - generic "Bohem/Bohem Signature Black" [ref=f30e257]: Bohem Signature Black
+                  - generic [ref=f30e258]:
+                    - text: KT&G · King Size
+                    - generic [ref=f30e259]: IR 1 эт.
+                - button "Добавить Bohem Signature Black на полку 3" [ref=f30e260] [cursor=pointer]
+              - listitem [ref=f30e263]:
+                - generic [ref=f30e264]:
+                  - generic "Bond/Bond Blue Compact" [ref=f30e265]: Bond Blue Compact
+                  - generic [ref=f30e266]:
+                    - text: PMI · Compact
+                    - generic [ref=f30e267]: IR 3 эт.
+                - button "Добавить Bond Blue Compact на полку 3" [ref=f30e268] [cursor=pointer]
+              - listitem [ref=f30e271]:
+                - generic [ref=f30e272]:
+                  - generic "Bond/Bond Premium Mix Compact" [ref=f30e273]: Bond Premium Mix Compact
+                  - generic [ref=f30e274]:
+                    - text: PMI · Compact
+                    - generic [ref=f30e275]: IR 2 эт.
+                - button "Добавить Bond Premium Mix Compact на полку 3" [ref=f30e276] [cursor=pointer]
+              - listitem [ref=f30e279]:
+                - generic [ref=f30e280]:
+                  - generic "Bond/Bond Silver Compact" [ref=f30e281]: Bond Silver Compact
+                  - generic [ref=f30e282]:
+                    - text: PMI · Compact
+                    - generic [ref=f30e283]: IR 1 эт.
+                - button "Добавить Bond Silver Compact на полку 3" [ref=f30e284] [cursor=pointer]
+              - listitem [ref=f30e287]:
+                - generic [ref=f30e288]:
+                  - generic "Camel/Camel Activate Purple Compact" [ref=f30e289]: Camel Activate Purple Compact
+                  - generic [ref=f30e290]:
+                    - text: JTI · Compact
+                    - generic [ref=f30e291]: IR 1 эт.
+                - button "Добавить Camel Activate Purple Compact на полку 3" [ref=f30e292] [cursor=pointer]
+              - listitem [ref=f30e295]:
+                - generic [ref=f30e296]:
+                  - generic "Camel/Camel Activate Ruby Compact" [ref=f30e297]: Camel Activate Ruby Compact
+                  - generic [ref=f30e298]:
+                    - text: JTI · Compact
+                    - generic [ref=f30e299]: IR 1 эт.
+                - button "Добавить Camel Activate Ruby Compact на полку 3" [ref=f30e300] [cursor=pointer]
+              - listitem [ref=f30e303]:
+                - generic [ref=f30e304]:
+                  - generic "Camel/Camel Activate Yellow Compact" [ref=f30e305]: Camel Activate Yellow Compact
+                  - generic [ref=f30e306]:
+                    - text: JTI · Compact
+                    - generic [ref=f30e307]: IR 1 эт.
+                - button "Добавить Camel Activate Yellow Compact на полку 3" [ref=f30e308] [cursor=pointer]
+              - listitem [ref=f30e311]:
+                - generic [ref=f30e312]:
+                  - generic "Camel/Camel Blue Compact" [ref=f30e313]: Camel Blue Compact
+                  - generic [ref=f30e314]:
+                    - text: JTI · Compact
+                    - generic [ref=f30e315]: IR 2 эт.
+                - button "Добавить Camel Blue Compact на полку 3" [ref=f30e316] [cursor=pointer]
+              - listitem [ref=f30e319]:
+                - generic [ref=f30e320]:
+                  - generic "Camel/Camel Filters" [ref=f30e321]: Camel Filters
+                  - generic [ref=f30e322]:
+                    - text: JTI · King Size
+                    - generic [ref=f30e323]: IR 1 эт.
+                - button "Добавить Camel Filters на полку 3" [ref=f30e324] [cursor=pointer]
+              - listitem [ref=f30e327]:
+                - generic [ref=f30e328]:
+                  - generic "Camel/Camel Studio Exotic Crush" [ref=f30e329]: Camel Studio Exotic Crush
+                  - generic [ref=f30e330]:
+                    - text: JTI · King Size
+                    - generic [ref=f30e331]: IR 1 эт.
+                - button "Добавить Camel Studio Exotic Crush на полку 3" [ref=f30e332] [cursor=pointer]
+              - listitem [ref=f30e335]:
+                - generic [ref=f30e336]:
+                  - generic "Camel/Camel Studio Shisha Edition" [ref=f30e337]: Camel Studio Shisha Edition
+                  - generic [ref=f30e338]:
+                    - text: JTI · King Size
+                    - generic [ref=f30e339]: IR 1 эт.
+                - button "Добавить Camel Studio Shisha Edition на полку 3" [ref=f30e340] [cursor=pointer]
+              - listitem [ref=f30e343]:
+                - generic [ref=f30e344]:
+                  - generic "Camel/Camel Studio Sunny Mix" [ref=f30e345]: Camel Studio Sunny Mix
+                  - generic [ref=f30e346]:
+                    - text: JTI · King Size
+                    - generic [ref=f30e347]: IR 1 эт.
+                - button "Добавить Camel Studio Sunny Mix на полку 3" [ref=f30e348] [cursor=pointer]
+              - listitem [ref=f30e351]:
+                - generic [ref=f30e352]:
+                  - generic "Camel/Camel Studio Tropical Crush" [ref=f30e353]: Camel Studio Tropical Crush
+                  - generic [ref=f30e354]:
+                    - text: JTI · King Size
+                    - generic [ref=f30e355]: IR 1 эт.
+                - button "Добавить Camel Studio Tropical Crush на полку 3" [ref=f30e356] [cursor=pointer]
+              - listitem [ref=f30e359]:
+                - generic [ref=f30e360]:
+                  - generic "Captain Black/Captain Black Classic" [ref=f30e361]: Captain Black Classic
+                  - generic [ref=f30e362]:
+                    - text: Другие · King Size
+                    - generic [ref=f30e363]: IR 1 эт.
+                - button "Добавить Captain Black Classic на полку 3" [ref=f30e364] [cursor=pointer]
+              - listitem [ref=f30e367]:
+                - generic [ref=f30e368]:
+                  - generic "Captain Black/Captain Black Dark Crema" [ref=f30e369]: Captain Black Dark Crema
+                  - generic [ref=f30e370]:
+                    - text: Другие · King Size
+                    - generic [ref=f30e371]: IR 1 эт.
+                - button "Добавить Captain Black Dark Crema на полку 3" [ref=f30e372] [cursor=pointer]
+              - listitem [ref=f30e375]:
+                - generic [ref=f30e376]:
+                  - generic "Captain Black/Captain Black Purple" [ref=f30e377]: Captain Black Purple
+                  - generic [ref=f30e378]:
+                    - text: Другие · King Size
+                    - generic [ref=f30e379]: IR 1 эт.
+                - button "Добавить Captain Black Purple на полку 3" [ref=f30e380] [cursor=pointer]
+              - listitem [ref=f30e383]:
+                - generic [ref=f30e384]:
+                  - generic "Captain Black/Captain Black Red" [ref=f30e385]: Captain Black Red
+                  - generic [ref=f30e386]:
+                    - text: Другие · King Size
+                    - generic [ref=f30e387]: IR 1 эт.
+                - button "Добавить Captain Black Red на полку 3" [ref=f30e388] [cursor=pointer]
+              - listitem [ref=f30e391]:
+                - generic [ref=f30e392]:
+                  - generic "Chapman/Chapman Autumn Edition" [ref=f30e393]: Chapman Autumn Edition
+                  - generic [ref=f30e394]:
+                    - text: Другие · King Size
+                    - generic [ref=f30e395]: IR 1 эт.
+                - button "Добавить Chapman Autumn Edition на полку 3" [ref=f30e396] [cursor=pointer]
+              - listitem [ref=f30e399]:
+                - generic [ref=f30e400]:
+                  - generic "Chapman/Chapman Brown Compact" [ref=f30e401]: Chapman Brown Compact
+                  - generic [ref=f30e402]:
+                    - text: Другие · Compact
+                    - generic [ref=f30e403]: IR 1 эт.
+                - button "Добавить Chapman Brown Compact на полку 3" [ref=f30e404] [cursor=pointer]
+              - listitem [ref=f30e407]:
+                - generic [ref=f30e408]:
+                  - generic "Chapman/Chapman Brown KS" [ref=f30e409]: Chapman Brown KS
+                  - generic [ref=f30e410]:
+                    - text: Другие · King Size
+                    - generic [ref=f30e411]: IR 1 эт.
+                - button "Добавить Chapman Brown KS на полку 3" [ref=f30e412] [cursor=pointer]
+              - listitem [ref=f30e415]:
+                - generic [ref=f30e416]:
+                  - generic "Chapman/Chapman Brown KSSL" [ref=f30e417]: Chapman Brown KSSL
+                  - generic [ref=f30e418]:
+                    - text: Другие · King Size Slim
+                    - generic [ref=f30e419]: IR 1 эт.
+                - button "Добавить Chapman Brown KSSL на полку 3" [ref=f30e420] [cursor=pointer]
+              - listitem [ref=f30e423]:
+                - generic [ref=f30e424]:
+                  - generic "Chapman/Chapman Brown SS" [ref=f30e425]: Chapman Brown SS
+                  - generic [ref=f30e426]:
+                    - text: Другие · Super Slims
+                    - generic [ref=f30e427]: IR 1 эт.
+                - button "Добавить Chapman Brown SS на полку 3" [ref=f30e428] [cursor=pointer]
+              - listitem [ref=f30e431]:
+                - generic [ref=f30e432]:
+                  - generic "Chapman/Chapman Classic Compact" [ref=f30e433]: Chapman Classic Compact
+                  - generic [ref=f30e434]:
+                    - text: Другие · Compact
+                    - generic [ref=f30e435]: IR 1 эт.
+                - button "Добавить Chapman Classic Compact на полку 3" [ref=f30e436] [cursor=pointer]
+              - listitem [ref=f30e439]:
+                - generic [ref=f30e440]:
+                  - generic "Chapman/Chapman Classic KS" [ref=f30e441]: Chapman Classic KS
+                  - generic [ref=f30e442]:
+                    - text: Другие · King Size
+                    - generic [ref=f30e443]: IR 2 эт.
+                - button "Добавить Chapman Classic KS на полку 3" [ref=f30e444] [cursor=pointer]
+              - listitem [ref=f30e447]:
+                - generic [ref=f30e448]:
+                  - generic "Chapman/Chapman Classic SS" [ref=f30e449]: Chapman Classic SS
+                  - generic [ref=f30e450]:
+                    - text: Другие · Super Slims
+                    - generic [ref=f30e451]: IR 2 эт.
+                - button "Добавить Chapman Classic SS на полку 3" [ref=f30e452] [cursor=pointer]
+              - listitem [ref=f30e455]:
+                - generic [ref=f30e456]:
+                  - generic "Chapman/Chapman Eclipse Noire Gold" [ref=f30e457]: Chapman Eclipse Noire Gold
+                  - generic [ref=f30e458]:
+                    - text: Другие · King Size
+                    - generic [ref=f30e459]: IR 1 эт.
+                - button "Добавить Chapman Eclipse Noire Gold на полку 3" [ref=f30e460] [cursor=pointer]
+              - listitem [ref=f30e463]:
+                - generic [ref=f30e464]:
+                  - generic "Chapman/Chapman Eclipse Noire Plat" [ref=f30e465]: Chapman Eclipse Noire Plat
+                  - generic [ref=f30e466]:
+                    - text: Другие · King Size
+                    - generic [ref=f30e467]: IR 1 эт.
+                - button "Добавить Chapman Eclipse Noire Plat на полку 3" [ref=f30e468] [cursor=pointer]
+              - listitem [ref=f30e471]:
+                - generic [ref=f30e472]:
+                  - generic "Chapman/Chapman Fusion Flare Compact" [ref=f30e473]: Chapman Fusion Flare Compact
+                  - generic [ref=f30e474]:
+                    - text: Другие · Compact
+                    - generic [ref=f30e475]: IR 1 эт.
+                - button "Добавить Chapman Fusion Flare Compact на полку 3" [ref=f30e476] [cursor=pointer]
+              - listitem [ref=f30e479]:
+                - generic [ref=f30e480]:
+                  - generic "Chapman/Chapman Fusion Pulse Compact" [ref=f30e481]: Chapman Fusion Pulse Compact
+                  - generic [ref=f30e482]:
+                    - text: Другие · Compact
+                    - generic [ref=f30e483]: IR 1 эт.
+                - button "Добавить Chapman Fusion Pulse Compact на полку 3" [ref=f30e484] [cursor=pointer]
+              - listitem [ref=f30e487]:
+                - generic [ref=f30e488]:
+                  - generic "Chapman/Chapman Fusion Sparkle Compact" [ref=f30e489]: Chapman Fusion Sparkle Compact
+                  - generic [ref=f30e490]:
+                    - text: Другие · Compact
+                    - generic [ref=f30e491]: IR 1 эт.
+                - button "Добавить Chapman Fusion Sparkle Compact на полку 3" [ref=f30e492] [cursor=pointer]
+              - listitem [ref=f30e495]:
+                - generic [ref=f30e496]:
+                  - generic "Chapman/Chapman Gold KS" [ref=f30e497]: Chapman Gold KS
+                  - generic [ref=f30e498]:
+                    - text: Другие · King Size
+                    - generic [ref=f30e499]: IR 1 эт.
+                - button "Добавить Chapman Gold KS на полку 3" [ref=f30e500] [cursor=pointer]
+              - listitem [ref=f30e503]:
+                - generic [ref=f30e504]:
+                  - generic "Chapman/Chapman Gold SS" [ref=f30e505]: Chapman Gold SS
+                  - generic [ref=f30e506]:
+                    - text: Другие · Super Slims
+                    - generic [ref=f30e507]: IR 2 эт.
+                - button "Добавить Chapman Gold SS на полку 3" [ref=f30e508] [cursor=pointer]
+              - listitem [ref=f30e511]:
+                - generic [ref=f30e512]:
+                  - generic "Chapman/Chapman Green" [ref=f30e513]: Chapman Green
+                  - generic [ref=f30e514]:
+                    - text: Другие · King Size
+                    - generic [ref=f30e515]: IR 1 эт.
+                - button "Добавить Chapman Green на полку 3" [ref=f30e516] [cursor=pointer]
+              - listitem [ref=f30e519]:
+                - generic [ref=f30e520]:
+                  - generic "Chapman/Chapman Green Compact" [ref=f30e521]: Chapman Green Compact
+                  - generic [ref=f30e522]:
+                    - text: Другие · Compact
+                    - generic [ref=f30e523]: IR 1 эт.
+                - button "Добавить Chapman Green Compact на полку 3" [ref=f30e524] [cursor=pointer]
+              - listitem [ref=f30e527]:
+                - generic [ref=f30e528]:
+                  - generic "Chapman/Chapman Green KSSL" [ref=f30e529]: Chapman Green KSSL
+                  - generic [ref=f30e530]:
+                    - text: Другие · King Size Slim
+                    - generic [ref=f30e531]: IR 1 эт.
+                - button "Добавить Chapman Green KSSL на полку 3" [ref=f30e532] [cursor=pointer]
+              - listitem [ref=f30e535]:
+                - generic [ref=f30e536]:
+                  - generic "Chapman/Chapman Green SS" [ref=f30e537]: Chapman Green SS
+                  - generic [ref=f30e538]:
+                    - text: Другие · Super Slims
+                    - generic [ref=f30e539]: IR 1 эт.
+                - button "Добавить Chapman Green SS на полку 3" [ref=f30e540] [cursor=pointer]
+              - listitem [ref=f30e543]:
+                - generic [ref=f30e544]:
+                  - generic "Chapman/Chapman Purple SS" [ref=f30e545]: Chapman Purple SS
+                  - generic [ref=f30e546]:
+                    - text: Другие · Super Slims
+                    - generic [ref=f30e547]: IR 1 эт.
+                - button "Добавить Chapman Purple SS на полку 3" [ref=f30e548] [cursor=pointer]
+              - listitem [ref=f30e551]:
+                - generic [ref=f30e552]:
+                  - generic "Chapman/Chapman Red Compact" [ref=f30e553]: Chapman Red Compact
+                  - generic [ref=f30e554]:
+                    - text: Другие · Compact
+                    - generic [ref=f30e555]: IR 1 эт.
+                - button "Добавить Chapman Red Compact на полку 3" [ref=f30e556] [cursor=pointer]
+              - listitem [ref=f30e559]:
+                - generic [ref=f30e560]:
+                  - generic "Chapman/Chapman Red KS" [ref=f30e561]: Chapman Red KS
+                  - generic [ref=f30e562]:
+                    - text: Другие · King Size
+                    - generic [ref=f30e563]: IR 1 эт.
+                - button "Добавить Chapman Red KS на полку 3" [ref=f30e564] [cursor=pointer]
+              - listitem [ref=f30e567]:
+                - generic [ref=f30e568]:
+                  - generic "Chapman/Chapman Red KSSL" [ref=f30e569]: Chapman Red KSSL
+                  - generic [ref=f30e570]:
+                    - text: Другие · King Size Slim
+                    - generic [ref=f30e571]: IR 1 эт.
+                - button "Добавить Chapman Red KSSL на полку 3" [ref=f30e572] [cursor=pointer]
+            - button "Показать ещё 80" [ref=f30e576] [cursor=pointer]
+        - generic [ref=f30e577]:
+          - generic [ref=f30e578]:
+            - group "Режим холста" [ref=f30e579]:
+              - button "Текстура" [pressed] [ref=f30e580] [cursor=pointer]
+              - button "Схема" [ref=f30e581] [cursor=pointer]
+              - button "IR-вид" [ref=f30e582] [cursor=pointer]
+            - generic [ref=f30e583] [cursor=pointer]:
+              - checkbox "Предупреждения" [checked] [ref=f30e584]
+              - text: Предупреждения
+            - generic [ref=f30e585] [cursor=pointer]:
+              - checkbox "Размеры" [ref=f30e586]
+              - text: Размеры
+            - button "Проверки · 6" [expanded] [ref=f30e587] [cursor=pointer]
+            - button "Отдалить" [ref=f30e588] [cursor=pointer]
+            - button "Весь шкаф" [ref=f30e590] [cursor=pointer]
+            - button "Приблизить" [ref=f30e591] [cursor=pointer]
+          - generic "Холст планограммы. Выберите блок пачек, затем стрелки двигают его, плюс и минус меняют фейсинги" [ref=f30e594]:
+            - img "Холст планограммы. Выберите блок пачек, затем стрелки двигают его, плюс и минус меняют фейсинги" [ref=f30e595]
+          - generic [ref=f30e596]:
+            - generic [ref=f30e597]:
+              - generic [ref=f30e598]:
+                - generic [ref=f30e599]: Фейсингов
+                - generic [ref=f30e600]: "16"
+                - generic [ref=f30e601]: заполнение 31%
+              - generic [ref=f30e602]:
+                - generic [ref=f30e603]: Обязательные
+                - generic [ref=f30e604]: 0/0
+                - generic [ref=f30e605]: must-have
+              - generic "Проверки «не помещается» точны для замеренных пачек" [ref=f30e606]:
+                - generic [ref=f30e607]: Замерено
+                - generic [ref=f30e608]: 0/9
+                - generic [ref=f30e609]: размеры пачек
+              - generic [ref=f30e610]:
+                - generic [ref=f30e611]: IR-готовность
+                - generic [ref=f30e612]: 0/9
+                - generic [ref=f30e613]: SKU с 3+ эталонами
+              - generic [ref=f30e614]:
+                - generic [ref=f30e615]: Доля полки по производителям · черта — цель контракта
+                - 'generic "KT&G: 6 из 16" [ref=f30e616]':
+                  - generic [ref=f30e617]: KT&G
+                  - generic [ref=f30e620]: 38%
+                - 'generic "JTI: 1 из 16" [ref=f30e621]':
+                  - generic [ref=f30e622]: JTI
+                  - generic [ref=f30e625]: 6%
+                - 'generic "PMI: 1 из 16" [ref=f30e626]':
+                  - generic [ref=f30e627]: PMI
+                  - generic [ref=f30e630]: 6%
+                - 'generic "Imperial: 8 из 16" [ref=f30e631]':
+                  - generic [ref=f30e632]: Imperial
+                  - generic [ref=f30e635]: 50%
+            - generic [ref=f30e636]:
+              - heading "Проверки 6" [level=3] [ref=f30e637]:
+                - text: Проверки
+                - generic [ref=f30e638]: "6"
+              - generic [ref=f30e639]:
+                - generic [ref=f30e640]: Ошибка
+                - generic [ref=f30e641]: "Полка 3: SKU «Esse/Esse Sense Himalaya SS» нет в каталоге"
+                - button "Показать" [ref=f30e642] [cursor=pointer]
+              - generic [ref=f30e643]:
+                - generic [ref=f30e644]: Ошибка
+                - generic [ref=f30e645]: "Полка 2: SKU «Esse/Esse Green SS» нет в каталоге"
+                - button "Показать" [ref=f30e646] [cursor=pointer]
+              - generic [ref=f30e647]:
+                - generic [ref=f30e648]: Ошибка
+                - generic [ref=f30e649]: "Полка 2: SKU «Esse/Esse Exchange Cold Green SS» нет в каталоге"
+                - button "Показать" [ref=f30e650] [cursor=pointer]
+              - generic [ref=f30e651]:
+                - generic [ref=f30e652]: Ошибка
+                - generic [ref=f30e653]: "Полка 2: SKU «Esse/Esse Exchange Cold Black SS» нет в каталоге"
+                - button "Показать" [ref=f30e654] [cursor=pointer]
+              - generic [ref=f30e655]:
+                - generic [ref=f30e656]: Ошибка
+                - generic [ref=f30e657]: "Полка 2: SKU «Bohem/libre» нет в каталоге"
+                - button "Показать" [ref=f30e658] [cursor=pointer]
+              - generic [ref=f30e659]:
+                - generic [ref=f30e660]: Заметка
+                - generic [ref=f30e661]: "Richmond Sunnset Edition: формат не указан в метке, взят King Size. Проверьте в каталоге"
+                - button "Показать" [ref=f30e662] [cursor=pointer]
+        - complementary [ref=f30e663]:
+          - group "Панель" [ref=f30e665]:
+            - button "Свойства" [pressed] [ref=f30e666] [cursor=pointer]
+            - button "Правила" [ref=f30e667] [cursor=pointer]
+            - button "Проверка" [ref=f30e668] [cursor=pointer]
+            - button "Версии" [ref=f30e669] [cursor=pointer]
+          - generic [ref=f30e671]:
+            - paragraph [ref=f30e672]: Полка 3 снизу · IR-ряд 1
+            - heading "Шкаф с толкателями С1-96-170" [level=4] [ref=f30e673]
+            - generic [ref=f30e674]:
+              - term [ref=f30e675]: Высота от пола
+              - definition [ref=f30e676]: 1076 мм
+              - term [ref=f30e677]: Просвет
+              - definition [ref=f30e678]: 464 мм
+              - term [ref=f30e679]: Занято
+              - definition [ref=f30e680]: 284 из 920 мм
+              - term [ref=f30e681]: Фейсингов
+              - definition [ref=f30e682]: "7"
+            - generic [ref=f30e683] [cursor=pointer]:
+              - checkbox "Не проверять эту полку по фото" [ref=f30e684]
+              - text: Не проверять эту полку по фото
+            - generic [ref=f30e685]:
+              - button "Очистить полку" [ref=f30e686] [cursor=pointer]
+              - link "Шаблон шкафа" [ref=f30e689] [cursor=pointer]:
+                - /url: "#/fixture/fx_w2ythdleh5"
+            - paragraph [ref=f30e692]: "Нажмите на блок пачек, чтобы менять фейсинги, или перетащите SKU из каталога. Клавиши: ← → двигают блок, ↑ ↓ меняют полку, + − фейсинги, ⌘Z отмена."
