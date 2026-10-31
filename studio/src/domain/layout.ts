@@ -1,7 +1,7 @@
 // «Подогнать под шкаф» и «Разложить по правилам»: черновики, которые человек потом правит руками
 
 import { MAKER_ORDER } from './formats';
-import { clearanceOf, innerW, laneOf, shelfIndex, shelvesTopDown, uid, usedWidth } from './geometry';
+import { clearanceOf, innerW, laneOf, packFloor, shelfIndex, shelvesTopDown, uid, usedWidth } from './geometry';
 import type { Fixture, Maker, Placement, Planogram, Shelf, Sku } from './types';
 
 type Get = (id: string) => Sku | undefined;
@@ -85,10 +85,18 @@ export function fitToFixture(p: Planogram, target: Fixture, get: Get): LayoutRes
   return { planogram, notes };
 }
 
-export interface AutoOptions { skus: string[] }
+export interface AutoOptions { skus: string[]; eyeLevel?: boolean; bySales?: boolean }
 
-// Разложить SKU по правилам: минимумы и must-have, доли производителей по контракту,
-// блоки производитель → бренд, премиум выше, близнецов не ставим рядом
+// Зона глаз покупателя у шкафа: середина пачек на высоте 120–160 см от пола
+export const EYE_MM: readonly [number, number] = [1200, 1600];
+const eyeDistance = (fx: Planogram['fixture'], sh: Shelf) => {
+  const mid = packFloor(fx, sh) + clearanceOf(fx, sh) / 2;
+  return mid < EYE_MM[0] ? EYE_MM[0] - mid : mid > EYE_MM[1] ? mid - EYE_MM[1] : 0;
+};
+
+// Разложить SKU по правилам: минимумы и must-have, доли производителей по контракту, остальное —
+// по продажам (если они есть в каталоге). Приоритетные блоки — на уровень глаз, дальше полки
+// по удалённости от него; блоки производитель → бренд, премиум раньше, близнецов не ставим рядом
 export function autoLayout(p: Planogram, get: Get, opt: AutoOptions): LayoutResult {
   const notes: string[] = [];
   const fx = p.fixture;
@@ -96,9 +104,17 @@ export function autoLayout(p: Planogram, get: Get, opt: AutoOptions): LayoutResu
   const skus = [...new Set(opt.skus)].map(get).filter((s): s is Sku => !!s);
   if (!skus.length || !top.length) return { planogram: p, notes: ['Нечего раскладывать: выберите SKU'] };
   const W = innerW(fx);
-  const ref = top[0];
-  const lane = (s: Sku) => laneOf(fx, ref, s);
+  // ширина ряда пачки — средняя по полкам, где она встаёт по высоте: у полок бывают разные ряды
+  const lanes = new Map(skus.map(s => {
+    const fit = top.filter(sh => s.h <= clearanceOf(fx, sh));
+    const on = fit.length ? fit : top;
+    return [s.id, on.reduce((a, sh) => a + laneOf(fx, sh, s), 0) / on.length];
+  }));
+  const lane = (s: Sku) => lanes.get(s.id)!;
   const budget = W * top.length * 0.97;   // мм на всех полках, с запасом на округление
+  const sales = (s: Sku) => (s.sales && s.sales > 0 ? s.sales : 0);
+  const withSales = skus.filter(s => sales(s) > 0);
+  const bySales = opt.bySales !== false && withSales.length > 0;
 
   // 1. фейсинги: минимумы, затем до долей производителей, затем поровну
   const f = new Map<string, number>(skus.map(s => [s.id, minOf(p, s.id)]));
@@ -127,17 +143,44 @@ export function autoLayout(p: Planogram, get: Get, opt: AutoOptions): LayoutResu
     const pool = byMaker.get(m)!;
     grow(pool, () => pool.reduce((a, s) => a + f.get(s.id)!, 0) >= want || makerMm(m) >= budget);
   });
-  grow(skus, () => used() + Math.min(...skus.map(lane)) > budget);
+  if (bySales) {
+    // остаток — пропорционально продажам: каждый следующий фейсинг тому, у кого продаж на фейсинг больше.
+    // SKU без продаж получают половину средней, чтобы не остаться на минимуме
+    const avg = withSales.reduce((a, s) => a + sales(s), 0) / withSales.length;
+    const weight = (s: Sku) => sales(s) || avg / 2;
+    for (;;) {
+      const cand = skus.filter(s => used() + lane(s) <= budget && f.get(s.id)! < 12);
+      if (!cand.length) break;
+      const best = cand.reduce((a, s) => (weight(s) / (f.get(s.id)! + 1) > weight(a) / (f.get(a.id)! + 1) ? s : a));
+      f.set(best.id, f.get(best.id)! + 1);
+    }
+    notes.push(`Фейсинги по продажам: данные есть у ${withSales.length} из ${skus.length} SKU`);
+  } else {
+    grow(skus, () => used() + Math.min(...skus.map(lane)) > budget);
+  }
 
-  // 2. порядок блоков: производители по цели доли, внутри — бренд, премиум раньше
+  // 2. порядок блоков: производители по цели доли и продажам, внутри — бренды с must-have
+  //    и продажами раньше, премиум раньше
+  const makerSales = (m: Maker) => (byMaker.get(m) ?? []).reduce((a, s) => a + sales(s), 0);
+  const brandScore = new Map<string, number>();
+  skus.forEach(s => brandScore.set(s.brand, (brandScore.get(s.brand) ?? 0) + sales(s) + (p.rules.mustHave.includes(s.id) ? 1e6 : 0)));
   const makerRank = (m: Maker) => -(p.rules.shareTargets[m] ?? 0) * 10 + MAKER_ORDER.indexOf(m) / 10;
   const seg = { premium: 0, mid: 1, economy: 2 } as const;
-  const queue = [...skus].sort((a, b) => makerRank(a.maker) - makerRank(b.maker) || a.brand.localeCompare(b.brand) || seg[a.segment] - seg[b.segment] || a.name.localeCompare(b.name))
+  const queue = [...skus].sort((a, b) => makerRank(a.maker) - makerRank(b.maker) || makerSales(b.maker) - makerSales(a.maker)
+    || brandScore.get(b.brand)! - brandScore.get(a.brand)! || a.brand.localeCompare(b.brand) || seg[a.segment] - seg[b.segment]
+    || sales(b) - sales(a) || a.name.localeCompare(b.name))
     .map(s => ({ s, left: f.get(s.id)! }));
 
-  // 3. по полкам сверху вниз: блок, который не встаёт по высоте, ждёт полку повыше просветом
+  // 3. по полкам: сначала уровень глаз, дальше всё дальше от него (или сверху вниз). Блок, который
+  //    не встаёт по высоте, ждёт полку с просветом побольше
+  const eye = opt.eyeLevel !== false;
+  const order = eye ? [...top].sort((a, b) => eyeDistance(fx, a) - eyeDistance(fx, b) || top.indexOf(a) - top.indexOf(b)) : top;
+  if (eye) {
+    const at = top.filter(sh => eyeDistance(fx, sh) === 0).map(sh => shelfIndex(fx, sh.id).fromBottom);
+    notes.push(at.length ? `Уровень глаз (120–160 см): полки ${at.join(', ')} — первые блоки и must-have` : 'Ни одна полка не попадает в 120–160 см: начато с ближайшей');
+  }
   const rows: Planogram['rows'] = Object.fromEntries(fx.shelves.map(sh => [sh.id, [] as Placement[]]));
-  top.forEach(sh => {
+  order.forEach(sh => {
     let room = W;
     const clear = clearanceOf(fx, sh);
     for (const b of queue) {

@@ -33,12 +33,13 @@ export interface Sku {
   formatGuessed: boolean;   // формат не удалось вывести из метки
   refs: number;             // эталонов в галерее
   price: number | null;     // ₸
+  sales?: number | null;    // продаж в неделю, пачек: авто-раскладка делит фейсинги по ним
   ean: string;
   look: Look;
   custom: boolean;          // добавлен вручную
 }
 
-export type SkuPatch = Partial<Pick<Sku, 'maker' | 'segment' | 'format' | 'w' | 'h' | 'd' | 'measured' | 'price' | 'ean' | 'name'>>;
+export type SkuPatch = Partial<Pick<Sku, 'maker' | 'segment' | 'format' | 'w' | 'h' | 'd' | 'measured' | 'price' | 'sales' | 'ean' | 'name'>>;
 
 export type Doors = 'none' | 'glass' | 'shutter';
 export type Material = 'graphite' | 'wood' | 'white';

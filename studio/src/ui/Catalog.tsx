@@ -57,7 +57,7 @@ export function Catalog() {
       </div>
       <div className="table-wrap">
         <table className="data">
-          <thead><tr><th /><th>SKU</th><th>Производитель</th><th>Сегмент</th><th>Формат</th><th>Ш</th><th>В</th><th>Г</th><th>Замер</th><th>Цена ₸</th><th>EAN</th>{tech && <th>Эталоны</th>}<th /></tr></thead>
+          <thead><tr><th /><th>SKU</th><th>Производитель</th><th>Сегмент</th><th>Формат</th><th>Ш</th><th>В</th><th>Г</th><th>Замер</th><th>Цена ₸</th><th title="Продаж в неделю, пачек">Продажи/нед</th><th>EAN</th>{tech && <th>Эталоны</th>}<th /></tr></thead>
           <tbody>
             {rows.map(s => (
               <tr key={s.id}>
@@ -72,6 +72,7 @@ export function Catalog() {
                 ))}
                 <td><input type="checkbox" checked={s.measured} aria-label="Размеры сняты с пачки" onChange={e => edit(s, { measured: e.target.checked })} /></td>
                 <td className="w-num"><input className="input" defaultValue={s.price ?? ''} key={`${s.id}-p-${s.price}`} aria-label="Цена" onBlur={e => edit(s, { price: num(e.target.value) })} /></td>
+                <td className="w-num"><input className="input" defaultValue={s.sales ?? ''} key={`${s.id}-s-${s.sales}`} aria-label="Продаж в неделю" placeholder="—" onBlur={e => edit(s, { sales: num(e.target.value) })} /></td>
                 <td style={{ width: 150 }}><input className="input mono" defaultValue={s.ean} key={`${s.id}-e-${s.ean}`} aria-label="EAN" onBlur={e => { if (e.target.value !== s.ean) edit(s, { ean: e.target.value.trim() }); }} /></td>
                 {tech && <td>{s.refs === 0 ? <span className="chip chip-err">0</span> : s.refs < 3 ? <span className="chip chip-warn">{s.refs}</span> : <span className="chip chip-ok">{s.refs}</span>}</td>}
                 <td>
