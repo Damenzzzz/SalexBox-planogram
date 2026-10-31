@@ -1,17 +1,23 @@
+import { Suspense, lazy } from 'react';
 import { Toast, Icon } from './ui/common';
 import { useRoute } from './store';
 import { Planograms } from './ui/Planograms';
-import { Fixtures } from './ui/Fixtures';
-import { Constructor } from './ui/Constructor';
 import { Editor } from './ui/Editor';
-import { Catalog } from './ui/Catalog';
-import { Compare } from './ui/Compare';
-import { Outlets } from './ui/Outlets';
-import { Help } from './ui/Help';
-import { Monitor } from './ui/Monitor';
-import { PriceListView, PrintView } from './ui/Print';
 import { ServerButton } from './ui/Server';
 import { useStore } from './store';
+
+// Остальные экраны грузятся, когда их открывают: первый экран — список планограмм и редактор
+const Fixtures = lazy(() => import('./ui/Fixtures').then(m => ({ default: m.Fixtures })));
+const Constructor = lazy(() => import('./ui/Constructor').then(m => ({ default: m.Constructor })));
+const Catalog = lazy(() => import('./ui/Catalog').then(m => ({ default: m.Catalog })));
+const Compare = lazy(() => import('./ui/Compare').then(m => ({ default: m.Compare })));
+const Outlets = lazy(() => import('./ui/Outlets').then(m => ({ default: m.Outlets })));
+const Help = lazy(() => import('./ui/Help').then(m => ({ default: m.Help })));
+const Monitor = lazy(() => import('./ui/Monitor').then(m => ({ default: m.Monitor })));
+const PrintView = lazy(() => import('./ui/Print').then(m => ({ default: m.PrintView })));
+const PriceListView = lazy(() => import('./ui/Print').then(m => ({ default: m.PriceListView })));
+
+const Loading = () => <div className="page"><p className="hint" role="status">Загружаю…</p></div>;
 
 const TABS: [string, string, string, string[]][] = [
   ['planograms', 'Планограммы', 'grid', ['planograms', 'planogram']],
@@ -25,8 +31,8 @@ const TABS: [string, string, string, string[]][] = [
 export default function App() {
   const [section = 'planograms', id] = useRoute();
   useStore(s => s.texRev);   // догрузились фото эталонов — перерисовать миниатюры
-  if (section === 'print' && id) return <><PrintView id={id} /><Toast /></>;
-  if (section === 'pricelist' && id) return <><PriceListView id={id} /><Toast /></>;
+  if (section === 'print' && id) return <Suspense fallback={<Loading />}><PrintView id={id} /><Toast /></Suspense>;
+  if (section === 'pricelist' && id) return <Suspense fallback={<Loading />}><PriceListView id={id} /><Toast /></Suspense>;
   let view;
   if (section === 'planogram' && id) view = <Editor id={id} />;
   else if (section === 'fixtures') view = <Fixtures />;
@@ -55,7 +61,7 @@ export default function App() {
         <a className={`btn btn-sm btn-ghost help-link${section === 'help' ? ' is-on' : ''}`} href="#/help" aria-current={section === 'help' ? 'page' : undefined}><Icon name="help" size={16} /><span>Помощь</span></a>
         <ServerButton />
       </header>
-      <main className="main">{view}</main>
+      <main className="main"><Suspense fallback={<Loading />}>{view}</Suspense></main>
       <Toast />
     </div>
   );
