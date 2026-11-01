@@ -1,7 +1,7 @@
 import { useMemo, useSyncExternalStore } from 'react';
 import { create } from 'zustand';
 import { buildCatalog } from './domain/catalog';
-import { ApiError, api, fetchMe, login as apiLogin, logout as apiLogout, switchClient as apiSwitch, type Me } from './domain/api';
+import { ApiError, api, connection, hello, setConnection, type Conn } from './domain/api';
 import { applyRemote, markSeed, resetSyncMeta, syncOnce, type Lost } from './domain/sync';
 import { connectGallery, setGalleryListener } from './render/gallery';
 import { clearTextures, clearThumbs, setOwnPhotoListener, setPhotos } from './render/textures';
@@ -15,7 +15,7 @@ import type { Cluster, Fixture, IrRun, Planogram, Sku, SkuPatch, Snapshot } from
 export interface Settings {
   warn: boolean;
   galleryTextures: boolean;    // фото эталонов вместо нарисованных пачек, если сервис их отдаёт
-  tech: boolean;               // технические детали IR: метки, эталоны, YAML; действует только у инженера
+  tech: boolean;               // технические детали IR: метки, эталоны, YAML; только с подключённым сервером
 }
 
 const DEFAULT_SETTINGS: Settings = { warn: true, galleryTextures: true, tech: false };
@@ -25,8 +25,8 @@ const pickSettings = (raw: Partial<Settings> | undefined): Settings => ({
   tech: raw?.tech ?? DEFAULT_SETTINGS.tech,
 });
 
-// Пространство данных браузера: без входа — local, после входа — свой у пользователя и клиента
-export const scopeOf = (me: Me | null) => (me ? `u:${me.login}:${me.client}` : 'local');
+// Пространство данных браузера: без сервера — local, с ключом — своё у каждого клиента
+export const scopeOf = (c: Conn | null) => (c ? `k:${c.client}` : 'local');
 
 export interface Data {
   fixtures: Fixture[];
@@ -43,7 +43,7 @@ export interface Data {
 export type SyncStatus = 'off' | 'idle' | 'syncing' | 'error';
 
 interface State extends Data {
-  me: Me | null;               // кто вошёл; null — работа только в этом браузере
+  server: { client: string; name: string } | null;   // подключение по ключу; null — работа только в этом браузере
   scope: string;
   refs: Record<string, number> | null;   // эталонов на метку: только инженеру, с сервера
   toast: { text: string; id: number } | null;
@@ -96,7 +96,7 @@ function normalize(raw: unknown, scope: string): Data {
 
 export const useStore = create<State>((set, get) => ({
   ...EMPTY,
-  me: null,
+  server: null,
   scope: 'local',
   refs: null,
   toast: null,
@@ -214,57 +214,94 @@ useStore.subscribe(s => {
   timer = setTimeout(() => persist(s), 300);
 });
 
-// Кто вошёл, запомненный на случай работы без сети: только имя, роль и клиент, без секретов
-const ME_KEY = 'planogram-studio.me';
-const rememberMe = (me: Me | null) => { try { if (me) localStorage.setItem(ME_KEY, JSON.stringify(me)); else localStorage.removeItem(ME_KEY); } catch { /* не критично */ } };
-const rememberedMe = (): Me | null => { try { return JSON.parse(localStorage.getItem(ME_KEY) ?? 'null'); } catch { return null; } };
+// Подключение помним так: клиент и подпись — в localStorage, ключ — в sessionStorage (до закрытия
+// вкладки) или, если попросили запомнить, в localStorage этого компьютера
+const PROFILE_KEY = 'planogram-studio.server';
+const KEY_KEY = 'planogram-studio.key';
+export function savedProfile(): { client: string; name: string } {
+  try { const p = JSON.parse(localStorage.getItem(PROFILE_KEY) ?? 'null'); return { client: p?.client ?? 'default', name: p?.name ?? '' }; }
+  catch { return { client: 'default', name: '' }; }
+}
+export const keyRemembered = () => { try { return !!localStorage.getItem(KEY_KEY); } catch { return false; } };
+function saveConn(c: Conn | null, remember: boolean) {
+  try {
+    sessionStorage.removeItem(KEY_KEY);
+    localStorage.removeItem(KEY_KEY);
+    if (!c) return;   // клиент и подпись оставляем: подставятся при следующем подключении
+    localStorage.setItem(PROFILE_KEY, JSON.stringify({ client: c.client, name: c.name }));
+    (remember ? localStorage : sessionStorage).setItem(KEY_KEY, c.key);
+  } catch { /* хранилище закрыто — подключение проживёт до перезагрузки */ }
+}
+function savedConn(): Conn | null {
+  try {
+    const key = sessionStorage.getItem(KEY_KEY) ?? localStorage.getItem(KEY_KEY);
+    return key ? { key, ...savedProfile() } : null;
+  } catch { return null; }
+}
 
 // Открыть пространство: дописать текущее, прочитать новое, запустить синхронизацию
-async function openScope(me: Me | null) {
+async function openScope(c: Conn | null) {
   const was = hydrated ? useStore.getState().settings : null;   // настройки браузера общие для всех пространств
   if (hydrated) { clearTimeout(timer); await persist(useStore.getState()); }
   await syncIdle();
   hydrated = false;
-  const scope = scopeOf(me);
+  setConnection(c);
+  const scope = scopeOf(c);
   const data = normalize(await readData(scope), scope);
-  useStore.setState({ ...data, settings: was ?? data.settings, me, scope, refs: null, sync: { status: me ? 'idle' : 'off', at: null, error: null } });
+  useStore.setState({ ...data, settings: was ?? data.settings, server: c ? { client: c.client, name: c.name } : null, scope, refs: null, sync: { status: c ? 'idle' : 'off', at: null, error: null } });
   hydrated = true;
   persist(useStore.getState());   // примеры при первом запуске тоже сохраняем
-  rememberMe(me);
-  setAuthor(me?.name);
+  setAuthor(c?.name || undefined);
   refreshGallery();
   loadRefs();
-  if (me) scheduleSync(300);
+  if (c) scheduleSync(300);
 }
 
 // Загрузка при старте: main.tsx рисует приложение сразу после чтения браузерных данных — в
-// пространстве последнего входа. Сессию сервер проверяет в фоне: кончилась или вошли под другим
-// клиентом — переключаемся. Сервер недоступен — работаем дальше, синхронизация догонит
-const same = (a: Me | null, b: Me | null) => (a?.login ?? null) === (b?.login ?? null) && (a?.client ?? null) === (b?.client ?? null);
+// пространстве сохранённого подключения. Ключ сервер проверяет в фоне: перестал подходить —
+// отключаемся. Сервер недоступен — работаем дальше, синхронизация догонит
 export async function hydrate() {
-  await openScope(rememberedMe());
-  fetchMe()
-    .then(me => { if (!same(me, useStore.getState().me)) return openScope(me); if (me) { useStore.setState({ me }); rememberMe(me); } })
-    .catch(e => { if (e instanceof ApiError && (e.status === 401 || e.status === 403)) return openScope(null); });
+  try { localStorage.removeItem('planogram-studio.me'); } catch { /* след старого входа по паролю */ }
+  const c = savedConn();
+  await openScope(c);
+  if (c) hello(c).catch(e => {
+    if (!(e instanceof ApiError) || (e.status !== 401 && e.status !== 403)) return;
+    saveConn(null, false);
+    useStore.getState().notify('Ключ API больше не подходит: подключитесь заново');
+    return openScope(null);
+  });
 }
 
-export async function signIn(loginName: string, password: string) {
-  const me = await apiLogin(loginName, password);
-  await openScope(me);
-  return me;
+// Подключиться: сначала проверить ключ, потом открыть пространство клиента
+export async function connect(c: Conn, remember: boolean) {
+  const next = { key: c.key.trim(), client: c.client.trim() || 'default', name: c.name.trim() };
+  await hello(next);
+  saveConn(next, remember);
+  await openScope(next);
 }
 
-export async function signOut() {
-  try { await apiLogout(); } catch { /* сессия уже кончилась — всё равно выходим */ }
+export async function disconnect() {
+  saveConn(null, false);
   await openScope(null);
 }
 
 export async function changeClient(client: string) {
-  const me = await apiSwitch(client);
-  await openScope(me);
+  const c = connection();
+  if (c && client.trim() && client.trim() !== c.client) await connect({ ...c, client }, keyRemembered());
 }
 
-// Данные, накопленные без входа, — в пространство клиента: чего там нет по id, то добавится
+// Сменить подпись: пространство то же, меняется только имя в журнале и мониторинге
+export function setSigner(name: string) {
+  const c = connection();
+  if (!c) return;
+  const next = { ...c, name: name.trim() };
+  setConnection(next);
+  saveConn(next, keyRemembered());
+  setAuthor(next.name || undefined);
+  useStore.setState({ server: { client: next.client, name: next.name } });
+}
+
+// Данные, накопленные без сервера, — в пространство клиента: чего там нет по id, то добавится
 export async function importLocal(): Promise<number> {
   const local = normalize(await readData('local'), 'local-import');
   let n = 0;
@@ -284,13 +321,13 @@ export async function importLocal(): Promise<number> {
   return n;
 }
 
-// ---- хранение на сервере: проход после входа, через 2 с после правки и раз в 15 с ----
+// ---- хранение на сервере: проход после подключения, через 2 с после правки и раз в 15 с ----
 let syncing: Promise<void> | null = null, again = false;
 let syncTimer: ReturnType<typeof setTimeout> | undefined;
 const syncIdle = () => syncing ?? Promise.resolve();
 export function runSync(): Promise<void> {
   const s = useStore.getState();
-  if (!s.me) { useStore.setState({ sync: { status: 'off', at: null, error: null } }); return Promise.resolve(); }
+  if (!s.server) { useStore.setState({ sync: { status: 'off', at: null, error: null } }); return Promise.resolve(); }
   if (syncing) { again = true; return syncing; }
   syncing = pass(s.scope).finally(() => {
     syncing = null;
@@ -313,8 +350,8 @@ async function pass(scope: string) {
       s.notify(`На сервере правили те же документы (${r.conflicts.length}): взята серверная версия${parts.length ? `; ваши правки: ${parts.join(', ')}` : ', подтверждения сверок объединены'}`);
     }
   } catch (e) {
-    if (e instanceof ApiError && e.status === 401) {   // сессия кончилась: дальше без сервера, пока не войдут снова
-      useStore.setState({ sync: { status: 'error', at: now(), error: 'Сессия закончилась: войдите снова' } });
+    if (e instanceof ApiError && e.status === 401) {   // ключ отозвали: дальше без сервера, пока не подключатся снова
+      useStore.setState({ sync: { status: 'error', at: now(), error: 'Ключ API не подошёл: подключитесь заново' } });
       return;
     }
     useStore.setState({ sync: { status: 'error', at: now(), error: (e as Error).message } });
@@ -331,9 +368,9 @@ useStore.subscribe((s, prev) => {
     if (s.settings.tech !== prev.settings.tech) loadRefs();
     return;
   }
-  if (s.me && DOC_KEYS.some(k => s[k] !== prev[k])) scheduleSync();
+  if (s.server && DOC_KEYS.some(k => s[k] !== prev[k])) scheduleSync();
 });
-setInterval(() => { if (hydrated && useStore.getState().me) runSync(); }, 15_000);
+setInterval(() => { if (hydrated && useStore.getState().server) runSync(); }, 15_000);
 
 // ---- фото эталонов как текстуры ----
 // Догрузились фото пачек — перерисовать холсты; пачка загрузок склеивается в одну перерисовку
@@ -348,27 +385,25 @@ let galleryTimer: ReturnType<typeof setTimeout> | undefined;
 function refreshGallery() {
   clearTimeout(galleryTimer);
   galleryTimer = setTimeout(() => {
-    const { settings, me } = useStore.getState();
-    // фото берём у того же сервера, где хранится Studio: без входа — рисованные пачки
-    const on = settings.galleryTextures && !!me;
+    const { settings, server } = useStore.getState();
+    // фото берём у того же сервера, где хранится Studio: без подключения — рисованные пачки
+    const on = settings.galleryTextures && !!server;
     setPhotos(on);
     connectGallery(on ? {} : null);
   }, 400);
 }
 
-// Сколько эталонов у метки — только инженеру: в сборке сайта этих чисел нет
+// Сколько эталонов у метки — только с сервера и по галочке: в сборке сайта этих чисел нет
 function loadRefs() {
-  const { me, settings } = useStore.getState();
-  if (me?.role !== 'admin' || !settings.tech) { useStore.setState({ refs: null }); return; }
+  const { server, settings } = useStore.getState();
+  if (!server || !settings.tech) { useStore.setState({ refs: null }); return; }
   api<{ labels: Record<string, number> }>({}, '/v1/gallery/refs')
     .then(r => useStore.setState({ refs: r.labels }))
     .catch(() => useStore.setState({ refs: null }));
 }
 
-// Технические блоки IR видны только инженеру; обычный пользователь их не видит
-export const useTech = () => useStore(s => s.settings.tech && s.me?.role === 'admin');
-// Утверждать и публиковать: руководитель и инженер. Без входа публиковать некуда, а утвердить можно
-export const useCanApprove = () => useStore(s => !s.me || s.me.role !== 'editor');
+// Технические блоки IR — по галочке в «Подключении» и только с сервером; по умолчанию скрыты
+export const useTech = () => useStore(s => s.settings.tech && !!s.server);
 
 export function useCatalog() {
   const patches = useStore(s => s.patches);

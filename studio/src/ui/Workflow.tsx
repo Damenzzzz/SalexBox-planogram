@@ -7,7 +7,7 @@ import { irName, toIrYaml } from '../domain/irExport';
 import { autoLayout, fitToFixture } from '../domain/layout';
 import type { Planogram, Sku, Snapshot } from '../domain/types';
 import { ACTION_RU, diffPlanograms, restoreFrom, withEntry, type Change } from '../domain/versions';
-import { go, keepSnapshot, runSync, useCanApprove, useStore } from '../store';
+import { go, keepSnapshot, runSync, useStore } from '../store';
 import { Icon, Modal, SceneThumb } from './common';
 import { STATUS_NAME } from './Planograms';
 
@@ -21,8 +21,6 @@ const fmt = (iso: string) => new Date(iso).toLocaleString('ru-RU', { dateStyle: 
 export function WorkflowBar({ p, get }: { p: Planogram; get: Get }) {
   const [modal, setModal] = useState<null | 'review' | 'approve' | 'return' | 'publish'>(null);
   const { savePlanogram, notify } = useStore.getState();
-  const canApprove = useCanApprove();
-  const lock = canApprove ? undefined : 'Утверждает и публикует руководитель';
   const act = (action: 'review' | 'approved' | 'returned', note: string) => {
     const status = action === 'review' ? 'review' : action === 'approved' ? 'approved' : 'draft';
     const next = withEntry(p, action, note, status);
@@ -37,11 +35,11 @@ export function WorkflowBar({ p, get }: { p: Planogram; get: Get }) {
       <span className="chip">версия {p.version}</span>
       {p.status === 'draft' && <button className="btn btn-sm" onClick={() => setModal('review')}><Icon name="send" size={15} />На согласование</button>}
       {p.status === 'review' && <>
-        <button className="btn btn-sm btn-primary" disabled={!canApprove} title={lock} onClick={() => setModal('approve')}><Icon name="check" size={15} />Утвердить</button>
-        <button className="btn btn-sm" disabled={!canApprove} title={lock} onClick={() => setModal('return')}>Вернуть</button>
+        <button className="btn btn-sm btn-primary" onClick={() => setModal('approve')}><Icon name="check" size={15} />Утвердить</button>
+        <button className="btn btn-sm" onClick={() => setModal('return')}>Вернуть</button>
       </>}
-      {p.status === 'approved' && <button className="btn btn-sm btn-primary" disabled={!canApprove} title={lock} onClick={() => setModal('publish')}><Icon name="cloud" size={15} />Опубликовать</button>}
-      {p.status === 'published' && <button className="btn btn-sm" disabled={!canApprove} onClick={() => setModal('publish')} title={lock ?? (p.publishedAs ?? '')}><Icon name="pin" size={15} />Точки · {p.assign.outlets.length + p.assign.clusters.length ? 'назначены' : 'нет'}</button>}
+      {p.status === 'approved' && <button className="btn btn-sm btn-primary" onClick={() => setModal('publish')}><Icon name="cloud" size={15} />Опубликовать</button>}
+      {p.status === 'published' && <button className="btn btn-sm" onClick={() => setModal('publish')} title={p.publishedAs ?? ''}><Icon name="pin" size={15} />Точки · {p.assign.outlets.length + p.assign.clusters.length ? 'назначены' : 'нет'}</button>}
       {(modal === 'review' || modal === 'approve' || modal === 'return') && (
         <NoteModal p={p} get={get} kind={modal} onClose={() => setModal(null)}
           onDone={note => act(modal === 'review' ? 'review' : modal === 'approve' ? 'approved' : 'returned', note)} />
@@ -91,7 +89,7 @@ const refName = (r: Ref) => `«${r.title ?? r.name}»${r.version ? ` v${r.versio
 const listShort = (xs: string[], n = 8) => `${xs.slice(0, n).join(', ')}${xs.length > n ? ` и ещё ${xs.length - n}` : ''}`;
 
 function PublishModal({ p, get, onClose }: { p: Planogram; get: Get; onClose: () => void }) {
-  const me = useStore(s => s.me);
+  const server = useStore(s => s.server);
   const clusters = useStore(s => s.clusters);
   const { savePlanogram, notify } = useStore.getState();
   const [chosen, setChosen] = useState<string[]>(p.assign.clusters);
@@ -111,7 +109,7 @@ function PublishModal({ p, get, onClose }: { p: Planogram; get: Get; onClose: ()
 
   // Предпросмотр: сначала кластеры уходят на сервер, потом пробная публикация показывает, что изменится
   useEffect(() => {
-    if (!me) return;
+    if (!server) return;
     let alive = true;
     const t = setTimeout(async () => {
       try {
@@ -121,7 +119,7 @@ function PublishModal({ p, get, onClose }: { p: Planogram; get: Get; onClose: ()
       } catch (e) { if (alive) setError((e as Error).message); }
     }, 350);
     return () => { alive = false; clearTimeout(t); };
-  }, [me, request]);
+  }, [server, request]);
 
   const conflicts = (plan?.taken.length ?? 0) + (plan?.clusters_taken.length ?? 0);
   const publish = async () => {
@@ -145,10 +143,10 @@ function PublishModal({ p, get, onClose }: { p: Planogram; get: Get; onClose: ()
   return (
     <Modal title={p.status === 'published' ? 'Точки опубликованной версии' : 'Опубликовать'} onClose={onClose} footer={<>
       <button className="btn" onClick={onClose}>Отмена</button>
-      <button className="btn btn-primary" disabled={!!busy || !me || !plan || (conflicts > 0 && !agree)} onClick={publish}><Icon name="cloud" size={15} />{p.status === 'published' ? 'Сохранить точки' : 'Опубликовать'}</button>
+      <button className="btn btn-primary" disabled={!!busy || !server || !plan || (conflicts > 0 && !agree)} onClick={publish}><Icon name="cloud" size={15} />{p.status === 'published' ? 'Сохранить точки' : 'Опубликовать'}</button>
     </>}>
-      {!me && <p className="chip chip-warn" style={{ whiteSpace: 'normal', lineHeight: 1.4, padding: '6px 9px' }}>Публикация идёт на сервер: сначала войдите (кнопка «Войти» в шапке).</p>}
-      <p>Версия <b>{p.version}</b> уйдёт на проверку фото{me ? <> клиента <b>{me.client}</b></> : null}. Опубликованную версию нельзя изменить: правка начнёт следующую.</p>
+      {!server && <p className="chip chip-warn" style={{ whiteSpace: 'normal', lineHeight: 1.4, padding: '6px 9px' }}>Публикация идёт на сервер: сначала подключите его (кнопка «Подключить» в шапке).</p>}
+      <p>Версия <b>{p.version}</b> уйдёт на проверку фото{server ? <> клиента <b>{server.client}</b></> : null}. Опубликованную версию нельзя изменить: правка начнёт следующую.</p>
       <div className="field"><span>Кластеры точек</span>
         {clusters.length ? (
           <div className="check-list">
@@ -173,7 +171,7 @@ function PublishModal({ p, get, onClose }: { p: Planogram; get: Get; onClose: ()
           {conflicts > 0 && <label className="check"><input type="checkbox" checked={agree} onChange={e => setAgree(e.target.checked)} />Да, перевести эти точки на эту планограмму</label>}
         </div>
       )}
-      {me && !plan && !error && <p className="hint" role="status">Считаю, что изменится…</p>}
+      {server && !plan && !error && <p className="hint" role="status">Считаю, что изменится…</p>}
       {busy && <p className="hint" role="status">{busy}</p>}
       {error && <p className="chip chip-err" style={{ whiteSpace: 'normal', lineHeight: 1.4, padding: '6px 9px' }}>{error}</p>}
     </Modal>

@@ -1,12 +1,25 @@
 // Клиент сервера Studio (IR-сервис SalesBox): сверка фото, хранение, публикация.
-// Доступ — сессия после входа: HttpOnly-кука, которую скрипт страницы не видит. Ключей в браузере нет.
+// Доступ — ключ API (X-API-Key), клиент в X-Client-Id и подпись человека в X-Studio-User.
 // Запросы идут на тот же адрес, откуда открыта Studio (в разработке их пересылает Vite).
 
 export interface ApiConfig { apiBase?: string }
 
-// Кто вошёл: роль решает, что видно и какие кнопки доступны
+// Подключение: ключ, клиент (пространство данных: шкафы, планограммы, точки) и чьё имя ставить в журнал
+export interface Conn { key: string; client: string; name: string }
+let conn: Conn | null = null;
+export const setConnection = (c: Conn | null) => { conn = c; };
+export const connection = () => conn;
+
+// Кириллица в заголовке не проходит: подпись кодируем как в URL, сервер раскодирует
+export function authHeaders(c: Conn | null = conn): Record<string, string> {
+  if (!c) return {};
+  const h: Record<string, string> = { 'X-API-Key': c.key, 'X-Client-Id': c.client };
+  if (c.name) h['X-Studio-User'] = encodeURIComponent(c.name);
+  return h;
+}
+
+// Роли пользователей сервера — для таблицы «Команда» в мониторинге
 export type Role = 'admin' | 'manager' | 'editor';
-export interface Me { login: string; name: string; role: Role; clients: string[]; client: string }
 export const ROLE_RU: Record<Role, string> = { admin: 'инженер IR', manager: 'руководитель', editor: 'редактор' };
 
 export class ApiError extends Error {
@@ -21,13 +34,14 @@ export class ApiError extends Error {
 
 export const apiUrl = (c: ApiConfig, path: string) => `${(c.apiBase ?? '').replace(/\/$/, '')}${path}`;
 
-// fetch с сессией и понятными ошибками. Тело 409 и 4xx отдаём в ApiError.body: там текущая версия
+// fetch с ключом и понятными ошибками. Тело 409 и 4xx отдаём в ApiError.body: там текущая версия.
+// Куки не шлём: старая сессия входа не должна подменять ключ
 export async function api<T>(c: ApiConfig, path: string, init: RequestInit = {}): Promise<T> {
-  const headers: Record<string, string> = { ...(init.headers as Record<string, string> | undefined) };
+  const headers: Record<string, string> = { ...authHeaders(), ...(init.headers as Record<string, string> | undefined) };
   if (init.body && typeof init.body === 'string') headers['Content-Type'] = 'application/json';
   let res: Response;
   try {
-    res = await fetch(apiUrl(c, path), { ...init, headers, credentials: 'same-origin' });
+    res = await fetch(apiUrl(c, path), { ...init, headers, credentials: 'omit' });
   } catch {
     throw new ApiError(0, 'сервер недоступен: проверьте интернет');
   }
@@ -41,7 +55,7 @@ export async function api<T>(c: ApiConfig, path: string, init: RequestInit = {})
   if (!res.ok) {
     const detail = body && typeof body === 'object' && 'detail' in body ? (body as { detail: unknown }).detail : text;
     const text2 = typeof detail === 'string' ? detail.slice(0, 200) : JSON.stringify(detail).slice(0, 200);
-    const msg = res.status === 401 ? (path.endsWith('/login') ? text2 : 'нужно войти заново')
+    const msg = res.status === 401 ? 'ключ API не подошёл'
       : res.status === 403 ? `нет прав: ${text2}`
       : `сервер ответил ${res.status}: ${text2}`;
     throw new ApiError(res.status, msg, body);
@@ -72,9 +86,14 @@ export async function analyzePhoto(c: ApiConfig, file: File, fields: Record<stri
   return { photoId: rec.photo_id ?? null, result: (rec.result ?? rec) as Record<string, unknown> };
 }
 
-// Вход, выход, смена клиента
-export const fetchMe = () => api<Me | null>({}, '/v1/studio/me');
-export const login = (loginName: string, password: string) =>
-  api<Me>({}, '/v1/studio/login', { method: 'POST', body: jsonBody({ login: loginName, password }) });
-export const logout = () => api<void>({}, '/v1/studio/logout', { method: 'POST' });
-export const switchClient = (client: string) => api<Me>({}, '/v1/studio/client', { method: 'POST', body: jsonBody({ client }) });
+// Проверка ключа при подключении; сервер отмечает «зашёл в Studio» для мониторинга.
+// Сервер без /hello (старее этой Studio) — ключ проверяем обычным запросом
+export async function hello(c: Conn) {
+  const headers = authHeaders(c);
+  try {
+    await api<unknown>({}, '/v1/studio/hello', { method: 'POST', headers });
+  } catch (e) {
+    if (!(e instanceof ApiError) || e.status !== 404) throw e;
+    await api<unknown>({}, '/v1/planograms', { headers });
+  }
+}

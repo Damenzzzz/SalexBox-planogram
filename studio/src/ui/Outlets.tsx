@@ -27,8 +27,8 @@ export function Outlets() {
     try { setLive((await api<{ items: Assignment[] }>({}, '/v1/assignments')).items); }
     catch (e) { setLive(null); setLiveErr((e as Error).message); }
   }, []);
-  const me = useStore(s => s.me);
-  useEffect(() => { if (me) load(); else setLive(null); }, [me, load]);
+  const server = useStore(s => s.server);
+  useEffect(() => { if (server) load(); else setLive(null); }, [server, load]);
 
   // имя в IR → планограмма Studio: текущая версия или сохранённая (после публикации могли начать следующую)
   const byName = useMemo(() => {

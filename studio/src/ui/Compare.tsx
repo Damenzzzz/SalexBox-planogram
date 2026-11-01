@@ -50,7 +50,7 @@ function CompareView({ p }: { p: Planogram }) {
   const { get, list } = useCatalog();
   const settings = useStore(s => s.settings);
   const tech = useTech();
-  const me = useStore(s => s.me);
+  const connected = useStore(s => !!s.server);
   const allRuns = useStore(s => s.runs);
   const runs = useMemo(() => allRuns.filter(r => r.planogramId === p.id), [allRuns, p.id]);
   const { addRun, updateRun, deleteRun, savePlanogram, saveSnapshot, notify } = useStore.getState();
@@ -162,7 +162,7 @@ function CompareView({ p }: { p: Planogram }) {
             <input ref={jsonInput} type="file" accept=".json" hidden onChange={e => { const f = e.target.files?.[0]; if (f) loadJson(f); e.target.value = ''; }} />
             {busy && <p className="hint" role="status">{busy}</p>}
             <label className="field"><span>Точка (outlet_id)</span><input className="input" value={outlet} placeholder="необязательно" onChange={e => setOutlet(e.target.value)} /></label>
-            <button className="btn btn-sm btn-ghost" style={{ justifySelf: 'start' }} onClick={() => setServer(true)}><Icon name="cloud" size={15} />{me ? 'Сервер и аккаунт' : 'Войти, чтобы проверять фото'}</button>
+            <button className="btn btn-sm btn-ghost" style={{ justifySelf: 'start' }} onClick={() => setServer(true)}><Icon name="cloud" size={15} />{connected ? 'Подключение к серверу' : 'Подключить сервер, чтобы проверять фото'}</button>
             {server && <ServerModal onClose={() => setServer(false)} />}
             <button className="btn btn-sm" onClick={() => { const r = simulate(p, get); save(r, 'file', 'пример без фото', null, 'симуляция в Studio', null, null); notify('Пример сверки создан: статусы условные'); }}>Пример сверки без сервиса</button>
           </section>
