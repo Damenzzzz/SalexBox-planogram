@@ -142,7 +142,7 @@ function CompareView({ p }: { p: Planogram }) {
         <div className="canvas-bar"><b>Планограмма</b><span className="hint">{p.name} · v{p.version}</span>
           {run && run.planogramVersion !== p.version && <span className="chip chip-warn">сверка делалась по версии {run.planogramVersion}</span>}
           <span className="grow" />
-          <span className="legend">{STATUSES.filter(s => s !== 'ok').map(s => <span key={s}><i style={{ background: `var(${STATUS_TOKEN[s]})` }} />{STATUS_RU[s]}</span>)}</span>
+          <span className="legend">{STATUSES.map(s => <span key={s}><i style={{ background: `var(${STATUS_TOKEN[s]})` }} />{STATUS_RU[s]}</span>)}</span>
         </div>
         <Stage zoom={1} label="Планограмма со статусами слотов" cursor="pointer"
           scene={{ fx: p.fixture, rows: p.rows, sku: get, mode: 'texture', warn: settings.warn, dims: false, compare: mapped, truth: run ? (k, s) => truthStatus(run, k, s) : undefined, selSlot, skip: p.ir.skipShelves }}
@@ -192,11 +192,23 @@ function CompareView({ p }: { p: Planogram }) {
               <div className="section-head"><h3>Результат</h3>
                 <button className="btn btn-sm btn-ghost btn-danger" onClick={() => { deleteRun(run.id); photos.delete(run.id); setRunId(null); }}><Icon name="trash" size={14} />Удалить</button></div>
               <div className="cap-grid">
-                <div className="cap"><b>{pct(stats.irCompliance)}</b><span>соответствие по IR</span></div>
-                <div className="cap"><b>{stats.verified ? pct(stats.truthCompliance) : '—'}</b><span>по проверке</span></div>
-                <div className="cap"><b>{pct(stats.accuracy)}</b><span>IR прав в слотах</span></div>
-                <div className="cap"><b>{stats.error != null ? `${(stats.error * 100).toFixed(1)}` : '—'}</b><span>ошибка, п.п.</span></div>
+                <div className="cap"><b>{stats.irCompliance != null ? pct(stats.irCompliance) : <small>нет пары</small>}</b><span>соответствие по IR</span></div>
+                <div className="cap"><b>{stats.verified}<small> из {stats.slots}</small></b><span>проверено человеком</span>
+                  <i className="cap-bar"><i style={{ width: `${stats.slots ? (stats.verified / stats.slots) * 100 : 0}%` }} /></i></div>
+                <div className="cap"><b>{stats.verified ? pct(stats.truthCompliance) : <small>после проверки</small>}</b><span>соответствие по проверке</span></div>
+                <div className="cap"><b>{stats.accuracy != null ? pct(stats.accuracy) : <small>после проверки</small>}</b>
+                  <span>IR прав в слотах{stats.error != null ? ` · ошибка ${(stats.error * 100).toFixed(1)} п.п.` : ''}</span></div>
               </div>
+              {stats.verified < stats.slots && (
+                <div className="row-actions">
+                  <button className="btn btn-sm btn-primary" onClick={() => {
+                    const keys = run.report.rows.flatMap(r => r.slots.map(sl => slotKey(rowKey(r), sl.pos))).filter(k => !run.verdicts[k]);
+                    updateRun(run.id, r => ({ ...r, verdicts: { ...Object.fromEntries(keys.map(k => [k, { v: 'right' as const }])), ...r.verdicts } }));
+                    notify(`Подтверждено слотов: ${keys.length}. Если IR где-то ошибся, выберите слот и нажмите X`);
+                  }}><Icon name="check" size={15} />Всё верно</button>
+                  <span className="hint">или проверьте по одному: кликните слот, Enter — IR прав, X — ошибся</span>
+                </div>
+              )}
               {!matched && <p className="chip chip-warn" style={{ whiteSpace: 'normal', lineHeight: 1.4, padding: '6px 9px' }}>IR не сопоставил ни один ряд фото с полками этой планограммы. Скорее всего, на фото другой шкаф или видна только его часть: все пачки ушли в «сверх плана».</p>}
               {matched > 0 && unmatched > 0 && <p className="hint">{unmatched} ряд(а) фото без пары в планограмме: их пачки — «сверх плана».</p>}
               <p className="hint">Проверено {stats.verified} из {stats.slots} слотов. Enter — IR прав, X — ошибся, стрелки — следующий слот. {tech && run.models && `Модели: ${run.models}.`}</p>

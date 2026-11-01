@@ -51,6 +51,18 @@ export const STATUS_TOKEN: Record<SlotStatus, string> = {
   ok: '--st-ok', misplaced: '--st-misplaced', wrong_shelf: '--st-wrong', missing: '--st-missing', extra: '--st-extra', needs_review: '--st-review',
 };
 
+// Пачка, которую IR нашёл, но не узнал: серая, формата King Size
+const UNKNOWN_ID = '__unknown__';
+let unknown: Sku | null = null;
+function unknownPack(): Sku {
+  if (!unknown) {
+    const f = FORMATS.KS;
+    unknown = { ...ghostSku('Неизвестно/Пачка'), id: UNKNOWN_ID, name: 'не узнана', w: f.w, h: f.h, d: f.d,
+      look: { ...ghostSku('Неизвестно/Пачка').look, c: ['#5b6472', '#3c434e'] } };
+  }
+  return unknown;
+}
+
 export function drawScene(ctx: CanvasRenderingContext2D, o: SceneOpts): HitRect[] {
   const { fx, S, DPR } = o;
   const cs = getComputedStyle(document.documentElement);
@@ -179,7 +191,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, o: SceneOpts): HitRect[
     const row = o.rows![shelfId] ?? [];
     const fy = packFloor(fx, sh), cy = ceilingOf(fx, sh);
     const res = o.compare?.get(shelfId);
-    let x = fx.side, k = 0;
+    let x = fx.side, k = 0, extraIdx = 0;
     row.forEach(pl => {
       const s = o.sku(pl.sku) ?? ghostSku(pl.sku);   // нет в каталоге — рисуем по метке
       const lane = laneOf(fx, sh, s);
@@ -201,25 +213,35 @@ export function drawScene(ctx: CanvasRenderingContext2D, o: SceneOpts): HitRect[
         g.fillText(meta, cx, (y0 + y1) / 2 + 14 * S);
         k += pl.facings;
       } else {
+        const start = x;
         for (let f = 0; f < pl.facings; f++, k++) {
+          x = drawExtras(k, x);   // лишние пачки — на своём месте в ряду, а не в конце
           const r = res?.facings[k] ?? null;
           const st = r ? (o.truth ? o.truth(r.key, r.slot) : r.slot.status) : null;
           let shown: Sku | undefined = s;
-          if (r && (st === 'misplaced' || st === 'wrong_shelf') && r.slot.sku) shown = o.sku(r.slot.sku) ?? s;
-          const lx = x + lane * f;
-          drawPack(shown, lx, lane, fy, cy, st, r?.key);
+          if (r && (st === 'misplaced' || st === 'wrong_shelf') && r.slot.sku) shown = o.sku(r.slot.sku) ?? ghostSku(r.slot.sku);
+          drawPack(shown, x, lane, fy, cy, st, r?.key);
+          x += lane;
         }
+        hits.push({ kind: 'placement', id: pl.id, shelfId, x0: X(start), x1: X(x), y0: Y(cy), y1: Y(fy) });
+        return;
       }
       hits.push({ kind: 'placement', id: pl.id, shelfId, x0: X(x), x1: X(x + lane * pl.facings), y0: Y(cy), y1: Y(fy) });
       x += lane * pl.facings;
     });
-    if (res && !schema) {
-      res.extras.forEach(e => {
-        const s = e.res.slot.sku ? o.sku(e.res.slot.sku) : undefined;
+    if (res && !schema) x = drawExtras(Infinity, x);
+
+    // Лишние пачки после фейсинга номер upto: настоящая пачка, если IR её узнал, иначе «?»
+    function drawExtras(upto: number, at: number): number {
+      if (!res) return at;
+      while (extraIdx < res.extras.length && res.extras[extraIdx].after <= upto) {
+        const e = res.extras[extraIdx++];
+        const s = e.res.slot.sku ? o.sku(e.res.slot.sku) ?? ghostSku(e.res.slot.sku) : undefined;
         const lane = s ? laneOf(fx, sh, s) : 59;
-        drawPack(s, x, lane, fy, cy, o.truth ? o.truth(e.res.key, e.res.slot) : e.res.slot.status, e.res.key);
-        x += lane;
-      });
+        drawPack(s, at, lane, fy, cy, o.truth ? o.truth(e.res.key, e.res.slot) : e.res.slot.status, e.res.key);
+        at += lane;
+      }
+      return at;
     }
     const used = x - fx.side;
     if (used > innerW(fx)) {
@@ -228,8 +250,10 @@ export function drawScene(ctx: CanvasRenderingContext2D, o: SceneOpts): HitRect[
     }
   }
 
-  function drawPack(s: Sku | undefined, lx: number, lane: number, fy: number, cy: number, st: SlotStatus | null, key?: string) {
+  function drawPack(found: Sku | undefined, lx: number, lane: number, fy: number, cy: number, st: SlotStatus | null, key?: string) {
     const x0 = X(lx), x1 = X(lx + lane);
+    // неузнанная пачка на полке (сверх плана или на проверку) — серая пачка с «?», а не пустое место
+    const s = found ?? (st && st !== 'missing' ? unknownPack() : undefined);
     const empty = st === 'missing' || !s;
     if (empty) {
       const h = Math.min(86, cy - fy) * 0.5 * S, w = x1 - x0 - 4 * S;
@@ -250,14 +274,21 @@ export function drawScene(ctx: CanvasRenderingContext2D, o: SceneOpts): HitRect[
         g.strokeRect(px + 1.5, py + wh + 1.5, pw - 3, ph - wh - 3); g.setLineDash([]);
       }
     }
-    if (st && st !== 'ok') {
+    if (st) {
       const ph = empty ? Math.min(86, cy - fy) * 0.5 * S : Math.min(s!.h, cy - fy - 2) * S;
       const pw = empty ? x1 - x0 - 4 * S : Math.min(s!.w, lane) * S;
       const px = x0 + (x1 - x0 - pw) / 2, py = Y(fy) - ph;
-      g.strokeStyle = tok(STATUS_TOKEN[st]); g.lineWidth = 2.5;
+      // на месте — тонкая зелёная рамка; ошибки — толстая рамка своего цвета и значок
+      g.strokeStyle = tok(STATUS_TOKEN[st]); g.lineWidth = st === 'ok' ? 1.6 : 2.5;
       if (st === 'needs_review') g.setLineDash([4, 3]);
       g.strokeRect(px - 1.5, py - 1.5, pw + 3, ph + 3); g.setLineDash([]);
-      badge(px + pw, py, st);
+      if (st !== 'ok') badge(px + pw, py, st);
+      else { g.fillStyle = tok(STATUS_TOKEN.ok); g.globalAlpha = 0.12; g.fillRect(px, py, pw, ph); g.globalAlpha = 1; }
+      if (s && s.id === UNKNOWN_ID) {
+        g.fillStyle = 'rgba(255,255,255,.9)'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.font = `700 ${Math.max(10, 30 * S)}px "Golos Text", sans-serif`;
+        g.fillText('?', px + pw / 2, py + ph / 2);
+      }
     }
     if (key) {
       hits.push({ kind: 'slot', id: key, key, shelfId: '', x0, x1, y0: Y(cy), y1: Y(fy) });

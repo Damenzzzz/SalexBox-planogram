@@ -206,12 +206,12 @@ export function Monitor() {
 
           <section className="panel">
             <h2>Версии планограмм</h2>
-            <table className="table">
+            <div className="table-wrap"><table className="table">
               <thead><tr><th>Планограмма</th><th>Фото</th><th>Соответствие</th></tr></thead>
               <tbody>{data.by_planogram.map(p => (
                 <tr key={p.name}><td>{titleOf(data, p.name)}</td><td>{p.photos}</td><td><Status v={p.compliance} /></td></tr>
               ))}</tbody>
-            </table>
+            </table></div>
           </section>
         </>
       )}
