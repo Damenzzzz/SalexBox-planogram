@@ -87,13 +87,13 @@ export async function analyzePhoto(c: ApiConfig, file: File, fields: Record<stri
 }
 
 // Проверка ключа при подключении; сервер отмечает «зашёл в Studio» для мониторинга.
-// Сервер без /hello (старее этой Studio) — ключ проверяем обычным запросом
+// Сервер без /hello (старее этой Studio, отвечает 404 или 405) — ключ проверяем обычным запросом
 export async function hello(c: Conn) {
   const headers = authHeaders(c);
   try {
     await api<unknown>({}, '/v1/studio/hello', { method: 'POST', headers });
   } catch (e) {
-    if (!(e instanceof ApiError) || e.status !== 404) throw e;
+    if (!(e instanceof ApiError) || (e.status !== 404 && e.status !== 405)) throw e;
     await api<unknown>({}, '/v1/planograms', { headers });
   }
 }
