@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../domain/api';
 import { uid } from '../domain/geometry';
+import { clusterTree, parentOptions, type ClusterNode } from '../domain/clusters';
 import type { Cluster, Planogram } from '../domain/types';
 import { useStore } from '../store';
 import { Icon } from './common';
@@ -19,6 +20,7 @@ export function Outlets() {
   const [live, setLive] = useState<Assignment[] | null>(null);
   const [liveErr, setLiveErr] = useState<string | null>(null);
   const [q, setQ] = useState('');
+  const tree = useMemo(() => clusterTree(clusters), [clusters]);
 
   const load = useCallback(async () => {
     setLiveErr(null);
@@ -37,28 +39,38 @@ export function Outlets() {
   }, [planograms, snapshots]);
   const clusterOf = useMemo(() => {
     const m = new Map<string, string[]>();
-    clusters.forEach(c => c.outlets.forEach(o => m.set(o, [...(m.get(o) ?? []), c.name])));
+    tree.forEach(n => n.outlets.forEach(o => m.set(o, [...(m.get(o) ?? []), n.path])));
     return m;
-  }, [clusters]);
+  }, [tree]);
   const rows = (live ?? []).filter(a => !q || a.outlet_id.toLowerCase().includes(q.toLowerCase()) || a.planogram.includes(q));
+  const add = (parentId: string | null, name: string) => saveCluster({ id: uid('cl'), name, outlets: [], parentId, updatedAt: '' });
+  const remove = (n: ClusterNode) => {
+    // подкластеры не пропадают: поднимаются на уровень удалённого
+    clusters.filter(c => c.parentId === n.c.id).forEach(c => saveCluster({ ...c, parentId: n.c.parentId ?? null }));
+    deleteCluster(n.c.id);
+    setConfirm(null);
+    notify(`Кластер «${n.c.name}» удалён${n.children.length ? ', подкластеры поднялись на уровень выше' : ''}`);
+  };
 
   return (
     <div className="page">
       <div className="page-head">
         <div>
           <h1>Точки</h1>
-          <p>Кластер — группа точек с одной планограммой: сеть, город, формат магазина. При публикации планограмму назначают кластерам и отдельным точкам, и IR сверяет фото этих точек с ней сам.</p>
+          <p>Кластер — группа точек с одной планограммой: город, сеть, формат магазина. Кластеры вкладываются друг в друга: «Алматы» → «Супермаркет Южный». Точки подкластера входят и в родителя, поэтому планограмма «Алматы» действует на все его подкластеры, а своя планограмма подкластера её перекрывает.</p>
         </div>
         <div className="actions">
-          <button className="btn btn-primary" onClick={() => saveCluster({ id: uid('cl'), name: `Кластер ${clusters.length + 1}`, outlets: [], updatedAt: '' })}><Icon name="plus" />Новый кластер</button>
+          <button className="btn btn-primary" onClick={() => add(null, `Кластер ${clusters.length + 1}`)}><Icon name="plus" />Новый кластер</button>
         </div>
       </div>
 
-      {!clusters.length && <div className="empty"><p>Кластеров пока нет. Заведите, например, «Алматы · АЗС» и вставьте список outlet_id из Salesbox.</p></div>}
-      <div className="cards cluster-cards">
-        {clusters.map(c => <ClusterCard key={c.id} c={c} onSave={saveCluster}
-          onDelete={() => { if (confirm === c.id) { deleteCluster(c.id); setConfirm(null); notify('Кластер удалён'); } else setConfirm(c.id); }}
-          confirm={confirm === c.id} used={planograms.filter(p => p.assign.clusters.includes(c.id)).map(p => `${p.name} v${p.version}`)} />)}
+      {!clusters.length && <div className="empty"><p>Кластеров пока нет. Заведите, например, «Алматы», а внутри него «Супермаркет Южный», и вставьте список outlet_id из Salesbox.</p></div>}
+      <div className="cluster-tree">
+        {tree.map(n => (
+          <ClusterCard key={n.c.id} n={n} tree={tree} onSave={saveCluster} onAddChild={() => add(n.c.id, 'Новый подкластер')}
+            onDelete={() => (confirm === n.c.id ? remove(n) : setConfirm(n.c.id))} confirm={confirm === n.c.id}
+            used={planograms.filter(p => p.assign.clusters.includes(n.c.id)).map(p => `${p.name} v${p.version}`)} />
+        ))}
       </div>
 
       <section className="panel">
@@ -93,7 +105,7 @@ export function Outlets() {
             <tbody>{planograms.filter(p => p.publishedAs || p.assign.clusters.length || p.assign.outlets.length).map(p => (
               <tr key={p.id}>
                 <td><a href={`#/planogram/${p.id}`}>{p.name}</a> · v{p.version}</td><td className="mono">{p.publishedAs ?? '—'}</td>
-                <td>{p.assign.clusters.map(id => clusters.find(c => c.id === id)?.name ?? id).join(', ') || '—'}</td>
+                <td>{p.assign.clusters.map(id => tree.find(n => n.c.id === id)?.path ?? id).join(', ') || '—'}</td>
                 <td className="mono">{p.assign.outlets.join(', ') || '—'}</td>
               </tr>
             ))}</tbody>
@@ -104,20 +116,36 @@ export function Outlets() {
   );
 }
 
-function ClusterCard({ c, onSave, onDelete, confirm, used }: { c: Cluster; onSave: (c: Cluster) => void; onDelete: () => void; confirm: boolean; used: string[] }) {
+function ClusterCard({ n, tree, onSave, onAddChild, onDelete, confirm, used }: {
+  n: ClusterNode; tree: ClusterNode[]; onSave: (c: Cluster) => void; onAddChild: () => void; onDelete: () => void; confirm: boolean; used: string[];
+}) {
+  const c = n.c;
   const [text, setText] = useState(c.outlets.join('\n'));
   useEffect(() => { setText(c.outlets.join('\n')); }, [c.outlets]);
+  const parents = useMemo(() => parentOptions(tree, c.id), [tree, c.id]);
+  const parent = tree.find(x => x.c.id === c.parentId);
+  const sub = n.outlets.length - c.outlets.length;
   return (
-    <article className="lib-card cluster">
-      <div className="lib-body">
+    <article className={`cluster-node depth-${Math.min(n.depth, 4)}`} style={{ marginLeft: n.depth * 28 }}>
+      <div className="cluster-head">
         <input className="input cluster-name" aria-label="Название кластера" value={c.name} onChange={e => onSave({ ...c, name: e.target.value })} />
-        <label className="field"><span>Точки (outlet_id) · {c.outlets.length}</span>
-          <textarea className="input mono" rows={5} value={text} placeholder="out_014&#10;out_015" onChange={e => setText(e.target.value)}
+        <span className="chip">{n.outlets.length} точек{sub > 0 ? ` · ${sub} в подкластерах` : ''}</span>
+      </div>
+      {parent && <p className="hint">Входит в «{parent.path}»</p>}
+      <div className="cluster-body">
+        <label className="field"><span>Свои точки (outlet_id, через запятую или с новой строки) · {c.outlets.length}</span>
+          <textarea className="input mono" rows={3} value={text} placeholder="out_014&#10;out_015" onChange={e => setText(e.target.value)}
             onBlur={() => { const next = parse(text); if (next.join('|') !== c.outlets.join('|')) onSave({ ...c, outlets: next }); }} /></label>
-        <p className="hint">{used.length ? `В планограммах: ${used.join(', ')}` : 'Пока не выбран ни в одной планограмме'}</p>
-        <div className="lib-actions">
-          <button className={`btn btn-sm ${confirm ? 'btn-danger' : ''}`} onClick={onDelete}><Icon name="trash" size={15} />{confirm ? 'Точно удалить' : 'Удалить'}</button>
-        </div>
+        <label className="field"><span>Входит в</span>
+          <select className="select" value={c.parentId ?? ''} onChange={e => onSave({ ...c, parentId: e.target.value || null })}>
+            <option value="">— верхний уровень —</option>
+            {parents.map(x => <option key={x.c.id} value={x.c.id}>{'  '.repeat(x.depth)}{x.path}</option>)}
+          </select></label>
+      </div>
+      <p className="hint">{used.length ? `Планограммы: ${used.join(', ')}` : parent ? 'Своей планограммы нет: действует планограмма родителя, если она назначена' : 'Пока не выбран ни в одной планограмме'}</p>
+      <div className="lib-actions">
+        <button className="btn btn-sm" onClick={onAddChild}><Icon name="plus" size={14} />Подкластер</button>
+        <button className={`btn btn-sm ${confirm ? 'btn-danger' : 'btn-ghost'}`} onClick={onDelete}><Icon name="trash" size={14} />{confirm ? 'Точно удалить' : 'Удалить'}</button>
       </div>
     </article>
   );

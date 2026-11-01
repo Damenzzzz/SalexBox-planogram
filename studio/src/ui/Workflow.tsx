@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, jsonBody } from '../domain/api';
 import { analyse } from '../domain/checks';
+import { clusterTree } from '../domain/clusters';
 import { capacity } from '../domain/geometry';
 import { irName, toIrYaml } from '../domain/irExport';
 import { autoLayout, fitToFixture } from '../domain/layout';
@@ -151,9 +152,9 @@ function PublishModal({ p, get, onClose }: { p: Planogram; get: Get; onClose: ()
       <div className="field"><span>Кластеры точек</span>
         {clusters.length ? (
           <div className="check-list">
-            {clusters.map(c => (
-              <label key={c.id} className="check"><input type="checkbox" checked={chosen.includes(c.id)} onChange={e => setChosen(v => (e.target.checked ? [...v, c.id] : v.filter(x => x !== c.id)))} />
-                {c.name} <span className="hint">· {c.outlets.length} точек</span></label>
+            {clusterTree(clusters).map(n => (
+              <label key={n.c.id} className="check" style={{ paddingLeft: n.depth * 22 }}><input type="checkbox" checked={chosen.includes(n.c.id)} onChange={e => setChosen(v => (e.target.checked ? [...v, n.c.id] : v.filter(x => x !== n.c.id)))} />
+                {n.c.name} <span className="hint">· {n.outlets.length} точек{n.children.length ? ', с подкластерами' : ''}</span></label>
             ))}
           </div>
         ) : <p className="hint">Кластеров пока нет. Их заводят в разделе <a href="#/outlets" onClick={onClose}>«Точки»</a>.</p>}

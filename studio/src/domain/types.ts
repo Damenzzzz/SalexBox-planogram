@@ -142,7 +142,8 @@ export interface Snapshot {
 export interface Cluster {
   id: string;
   name: string;
-  outlets: string[];
+  outlets: string[];        // свои точки; точки подкластеров добавляются к ним
+  parentId?: string | null; // входит в кластер: «Алматы» → «Супермаркет Южный»
   updatedAt: string;
 }
 
