@@ -112,8 +112,11 @@ export function skuFromLabel(label: string, refs = 0, custom = false): Sku {
 }
 
 // refs — эталонов на метку с сервера (только инженеру); без них 0: в сборке сайта этих чисел нет
+// Метки галереи не меняются: список собирается один раз на набор refs, а не при каждой правке
+let baseCache: { refs: Record<string, number> | null; list: Sku[] } | null = null;
 export function baseCatalog(refs: Record<string, number> | null = null): Sku[] {
-  return gallery.labels.map(({ label }) => skuFromLabel(label, refs?.[label] ?? 0));
+  if (baseCache?.refs !== refs) baseCache = { refs, list: gallery.labels.map(({ label }) => skuFromLabel(label, refs?.[label] ?? 0)) };
+  return baseCache.list;
 }
 
 // Пачка, которой нет в каталоге: рисуем её по метке, а не пропускаем молча
