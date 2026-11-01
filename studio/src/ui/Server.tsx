@@ -1,23 +1,23 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { ROLE_RU } from '../domain/api';
 import { readData } from '../domain/persist';
-import { changeClient, importLocal, resetSync, runSync, signIn, signOut, useStore } from '../store';
+import { changeClient, connect, disconnect, importLocal, keyRemembered, resetSync, runSync, savedProfile, setSigner, useStore } from '../store';
 import { Icon, Modal } from './common';
 
 const STATUS_RU = { off: 'выключено', idle: 'всё сохранено', syncing: 'сохраняю…', error: 'нет связи' } as const;
+const errStyle = { whiteSpace: 'normal', lineHeight: 1.4, padding: '6px 9px' } as const;
 
-// Кнопка в шапке: «Войти» или кто вошёл и как дела с сохранением
+// Кнопка в шапке: «Подключить» или чьё подключение и как дела с сохранением
 export function ServerButton() {
-  const me = useStore(s => s.me);
+  const server = useStore(s => s.server);
   const sync = useStore(s => s.sync);
   const lost = useStore(s => s.lost.length);
   const [open, setOpen] = useState(false);
-  const label = !me ? 'Войти' : sync.status === 'error' ? 'Нет связи' : sync.status === 'syncing' ? 'Сохраняю…' : me.name;
+  const label = !server ? 'Подключить' : sync.status === 'error' ? 'Нет связи' : sync.status === 'syncing' ? 'Сохраняю…' : server.name || 'Сервер';
   return (
     <>
-      <button className={`btn btn-sm server-btn ${me ? `is-${sync.status}` : ''}`} onClick={() => setOpen(true)} title={sync.error ?? undefined}>
+      <button className={`btn btn-sm server-btn ${server ? `is-${sync.status}` : ''}`} onClick={() => setOpen(true)} title={sync.error ?? undefined}>
         <Icon name="cloud" size={16} /><span>{label}</span>
-        {me && me.clients.length > 1 && <span className="client-chip">{me.client}</span>}
+        {server && <span className="client-chip">{server.client}</span>}
         {lost > 0 && <span className="badge" title="Правки, уступившие серверу">{lost}</span>}
       </button>
       {open && <ServerModal onClose={() => setOpen(false)} />}
@@ -26,52 +26,60 @@ export function ServerButton() {
 }
 
 export function ServerModal({ onClose }: { onClose: () => void }) {
-  const me = useStore(s => s.me);
-  return me ? <AccountModal onClose={onClose} /> : <LoginModal onClose={onClose} />;
+  const server = useStore(s => s.server);
+  return server ? <AccountModal onClose={onClose} /> : <ConnectModal onClose={onClose} />;
 }
 
-function LoginModal({ onClose }: { onClose: () => void }) {
+function ConnectModal({ onClose }: { onClose: () => void }) {
   const { notify } = useStore.getState();
-  const [login, setLogin] = useState('');
-  const [password, setPassword] = useState('');
+  const [key, setKey] = useState('');
+  const [client, setClient] = useState(() => savedProfile().client);
+  const [name, setName] = useState(() => savedProfile().name);
+  const [remember, setRemember] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true); setError(null);
     try {
-      const me = await signIn(login.trim(), password);
-      notify(`Здравствуйте, ${me.name}`);
+      await connect({ key, client, name }, remember);
+      notify(`Подключено: клиент ${client.trim() || 'default'}`);
       onClose();
     } catch (err) {
       setError((err as Error).message);
     } finally { setBusy(false); }
   };
   return (
-    <Modal title="Вход" onClose={onClose} footer={<>
+    <Modal title="Подключение к серверу" onClose={onClose} footer={<>
       <button className="btn" onClick={onClose}>Отмена</button>
-      <button className="btn btn-primary" type="submit" form="login-form" disabled={busy || !login.trim() || !password}>{busy ? 'Вхожу…' : 'Войти'}</button>
+      <button className="btn btn-primary" type="submit" form="connect-form" disabled={busy || !key.trim()}>{busy ? 'Проверяю ключ…' : 'Подключить'}</button>
     </>}>
-      <form id="login-form" className="grid2" onSubmit={submit}>
-        <label className="field"><span>Логин или имя</span>
-          <input className="input" autoComplete="username" autoFocus placeholder="например, islambek" value={login} onChange={e => setLogin(e.target.value)} /></label>
-        <label className="field"><span>Пароль</span>
-          <input className="input" type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} /></label>
+      <form id="connect-form" className="grid2" onSubmit={submit}>
+        <label className="field"><span>Ключ API</span>
+          <input className="input mono" type="password" autoComplete="off" spellCheck={false} autoFocus value={key} onChange={e => setKey(e.target.value)} /></label>
+        <label className="field"><span>Клиент</span>
+          <input className="input" autoComplete="off" spellCheck={false} placeholder="default" value={client} onChange={e => setClient(e.target.value)} /></label>
+        <label className="field"><span>Как вас подписать</span>
+          <input className="input" autoComplete="name" placeholder="например, Исламбек" value={name} onChange={e => setName(e.target.value)} /></label>
       </form>
-      {error && <p className="chip chip-err" role="alert" style={{ whiteSpace: 'normal', lineHeight: 1.4, padding: '6px 9px' }}>{error}</p>}
-      <p className="hint">После входа планограммы, шкафы, точки и сверки хранятся на сервере вашей компании и открываются с любого компьютера. Без входа Studio работает только в этом браузере. Логин и пароль выдаёт администратор; вместо логина можно ввести имя. После пяти неверных попыток вход закрывается на 10 минут.</p>
+      <label className="check"><input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} />
+        <span>Запомнить ключ на этом компьютере</span></label>
+      {error && <p className="chip chip-err" role="alert" style={errStyle}>{error}</p>}
+      <p className="hint">Ключ выдаёт администратор IR. Клиент — пространство данных: у каждого клиента свои шкафы, планограммы и точки. Имя попадает в журнал согласования и в «Команду» мониторинга. Без галочки ключ забудется, когда закроете вкладку; на чужом компьютере галочку не ставьте.</p>
     </Modal>
   );
 }
 
 function AccountModal({ onClose }: { onClose: () => void }) {
-  const me = useStore(s => s.me)!;
+  const server = useStore(s => s.server)!;
   const settings = useStore(s => s.settings);
   const sync = useStore(s => s.sync);
   const lost = useStore(s => s.lost);
   const { setSettings, notify, restoreLost, dismissLost } = useStore.getState();
   const [busy, setBusy] = useState<string | null>(null);
   const [local, setLocal] = useState(0);
+  const [client, setClient] = useState(server.client);
+  const [name, setName] = useState(server.name);
   useEffect(() => {
     readData('local').then(d => setLocal(((d as { planograms?: unknown[] } | null)?.planograms ?? []).length)).catch(() => setLocal(0));
   }, []);
@@ -80,19 +88,23 @@ function AccountModal({ onClose }: { onClose: () => void }) {
     setBusy(text);
     try { await fn(); } catch (e) { notify((e as Error).message); } finally { setBusy(null); }
   };
+  const clientChanged = client.trim() !== '' && client.trim() !== server.client;
 
   return (
-    <Modal title={me.name} onClose={onClose} footer={<>
-      <button className="btn btn-ghost" disabled={!!busy} onClick={() => run('Выхожу…', async () => { await signOut(); notify('Вы вышли. Studio работает в этом браузере'); onClose(); })}>Выйти</button>
+    <Modal title="Подключение к серверу" onClose={onClose} footer={<>
+      <button className="btn btn-ghost" disabled={!!busy} onClick={() => run('Отключаю…', async () => { await disconnect(); notify('Отключено. Studio работает в этом браузере'); onClose(); })}>Отключить</button>
       <button className="btn btn-primary" onClick={onClose}>Готово</button>
     </>}>
-      <p className="hint">{ROLE_RU[me.role]} · {me.login}</p>
-      {me.clients.length > 1 ? (
+      <p className="hint">Ключ API {keyRemembered() ? 'запомнен на этом компьютере' : 'хранится до закрытия вкладки'}.</p>
+      <div className="grid2">
         <label className="field"><span>Клиент</span>
-          <select className="select" value={me.client} disabled={!!busy} onChange={e => run('Переключаю клиента…', () => changeClient(e.target.value))}>
-            {me.clients.map(c => <option key={c} value={c}>{c}</option>)}
-          </select></label>
-      ) : <p>Клиент: <b>{me.client}</b></p>}
+          <div className="row-actions">
+            <input className="input" spellCheck={false} value={client} disabled={!!busy} onChange={e => setClient(e.target.value)} />
+            {clientChanged && <button className="btn btn-sm" disabled={!!busy} onClick={() => run('Переключаю клиента…', () => changeClient(client))}>Сменить</button>}
+          </div></label>
+        <label className="field"><span>Как вас подписать</span>
+          <input className="input" value={name} onChange={e => setName(e.target.value)} onBlur={() => { if (name.trim() !== server.name) setSigner(name); }} /></label>
+      </div>
 
       <div className="row-actions">
         <span className={`chip ${sync.status === 'error' ? 'chip-err' : sync.status === 'idle' ? 'chip-ok' : ''}`}>{STATUS_RU[sync.status]}</span>
@@ -100,7 +112,7 @@ function AccountModal({ onClose }: { onClose: () => void }) {
         <button className="btn btn-sm" onClick={() => runSync()}><Icon name="refresh" size={15} />Синхронизировать</button>
         <button className="btn btn-sm btn-ghost" onClick={() => { resetSync(); notify('Studio заново сверит все документы с сервером'); }}>Сверить всё заново</button>
       </div>
-      {sync.error && <p className="chip chip-err" style={{ whiteSpace: 'normal', lineHeight: 1.4, padding: '6px 9px' }}>{sync.error}</p>}
+      {sync.error && <p className="chip chip-err" style={errStyle}>{sync.error}</p>}
       {busy && <p className="hint" role="status">{busy}</p>}
 
       {lost.length > 0 && (
@@ -120,17 +132,15 @@ function AccountModal({ onClose }: { onClose: () => void }) {
       {local > 0 && (
         <section className="lost">
           <h3>Данные этого браузера</h3>
-          <p className="hint">До входа здесь собрано планограмм: {local}. Их можно перенести к клиенту {me.client}: появятся у всех его пользователей.</p>
+          <p className="hint">Без сервера здесь собрано планограмм: {local}. Их можно перенести к клиенту {server.client}: появятся у всех, кто к нему подключён.</p>
           <button className="btn btn-sm" disabled={!!busy} onClick={() => run('Переношу…', async () => { const n = await importLocal(); notify(n ? `Перенесено документов: ${n}` : 'Всё уже было у клиента'); })}>Перенести к клиенту</button>
         </section>
       )}
 
       <label className="check big"><input type="checkbox" checked={settings.galleryTextures} onChange={e => setSettings({ galleryTextures: e.target.checked })} />
         <span><b>Фото пачек вместо рисунков</b><small>Если на сервере есть фото пачки, на шкафу показывается оно. Для остальных остаётся рисунок.</small></span></label>
-      {me.role === 'admin' && (
-        <label className="check big"><input type="checkbox" checked={settings.tech} onChange={e => setSettings({ tech: e.target.checked })} />
-          <span><b>Технические детали распознавания</b><small>Метки и эталоны галереи, файл для IR, стоимости выравнивания, номера рядов IR. Видно только инженеру.</small></span></label>
-      )}
+      <label className="check big"><input type="checkbox" checked={settings.tech} onChange={e => setSettings({ tech: e.target.checked })} />
+        <span><b>Технические детали распознавания</b><small>Метки и эталоны галереи, файл для IR, стоимости выравнивания, номера рядов IR. Для инженера IR.</small></span></label>
     </Modal>
   );
 }

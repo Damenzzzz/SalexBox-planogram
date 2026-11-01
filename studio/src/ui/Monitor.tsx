@@ -41,7 +41,7 @@ function Kpi({ label, value, share, note, color = 'var(--accent)' }: { label: st
 }
 
 export function Monitor() {
-  const me = useStore(s => s.me);
+  const server = useStore(s => s.server);
   const [days, setDays] = useState<'7' | '30' | '90'>('30');
   const [cluster, setCluster] = useState('');
   const [live, setLive] = useState<MonitorReport | null>(null);
@@ -53,13 +53,13 @@ export function Monitor() {
 
   useEffect(() => { try { localStorage.setItem(DEMO_KEY, demo ? '1' : '0'); } catch { /* не критично */ } }, [demo]);
   useEffect(() => {
-    if (!me || demo) return;
+    if (!server || demo) return;
     let alive = true;
     api<MonitorReport>({}, `/v1/studio/compliance?days=${days}&tz=${-new Date().getTimezoneOffset()}`)
       .then(r => { if (alive) { setLive(r); setError(null); } })
       .catch(e => { if (alive) setError((e as Error).message); });
     return () => { alive = false; };
-  }, [me, days, rev, demo]);
+  }, [server, days, rev, demo]);
 
   const outlets = useMemo(() => {
     if (!data) return [];
@@ -77,15 +77,15 @@ export function Monitor() {
         {!demo && <Seg<'7' | '30' | '90'> label="Период" value={days} options={[['7', '7 дней'], ['30', '30 дней'], ['90', '90 дней']]} onChange={setDays} />}
         <button className="btn btn-sm" aria-pressed={demo} onClick={() => setDemo(v => !v)} title="Сгенерированные данные для показа; в базу не пишутся"><Icon name="chart" size={15} />{demo ? 'Выключить демо' : 'Демо'}</button>
         {data && <button className="btn btn-sm" onClick={() => exportExcel(data, demo)}><Icon name="download" size={15} />Excel</button>}
-        {!demo && me && <button className="btn btn-sm" onClick={() => setRev(r => r + 1)}><Icon name="refresh" size={15} />Обновить</button>}
+        {!demo && server && <button className="btn btn-sm" onClick={() => setRev(r => r + 1)}><Icon name="refresh" size={15} />Обновить</button>}
       </div>
     </div>
   );
 
-  if (!me && !demo) {
+  if (!server && !demo) {
     return (
       <div className="page monitor">{head}
-        <div className="empty"><p>Мониторинг строится по фото с точек на сервере. Войдите кнопкой «Войти» справа вверху.</p></div></div>
+        <div className="empty"><p>Мониторинг строится по фото с точек на сервере. Подключите его кнопкой «Подключить» справа вверху.</p></div></div>
     );
   }
 
@@ -166,7 +166,7 @@ export function Monitor() {
                 <table className="table">
                   <thead><tr><th>Кто</th><th>Роль</th><th>Входов</th><th>Правок</th><th>Публикаций</th><th>Проверок фото</th><th>Последний раз</th></tr></thead>
                   <tbody>{act.users.map(u => (
-                    <tr key={u.login}><td><b>{u.name}</b> <span className="hint mono">{u.login}</span></td><td>{u.role ? ROLE_RU[u.role as Role] ?? u.role : '—'}</td>
+                    <tr key={u.login}><td><b>{u.name}</b>{u.login !== u.name && <> <span className="hint mono">{u.login}</span></>}</td><td>{u.role ? ROLE_RU[u.role as Role] ?? u.role : '—'}</td>
                       <td>{u.login_count}</td><td>{u.edits}</td><td>{u.publishes}</td><td>{u.checks}</td><td>{whenRu(u.last_seen)}</td></tr>
                   ))}</tbody>
                 </table>

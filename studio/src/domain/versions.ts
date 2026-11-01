@@ -12,7 +12,7 @@ export const ACTION_RU: Record<JournalAction, string> = {
   published: 'Опубликована', version: 'Новая версия', restored: 'Восстановлена из версии',
 };
 
-// Автор записей журнала — вошедший пользователь; без входа записи без автора
+// Автор записей журнала — подпись из подключения к серверу; без неё записи без автора
 let author: string | undefined;
 export const setAuthor = (name: string | undefined) => { author = name; };
 
