@@ -74,7 +74,8 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .page { max-width: 1320px; margin: 0 auto; padding: 24px 20px 60px; display: grid; gap: 20px; align-content: start; }
 .page-head { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; }
 .page-head h1 { font: 600 24px/1.15 var(--font-display); letter-spacing: -.02em; }
-.page-head p { color: var(--ink-3); margin-top: 6px; max-width: 70ch; }
+.page-head p { color: var(--ink-3); margin-top: 6px; max-width: min(70ch, 100%); }
+.page-head > div:first-child { min-width: 0; flex: 1 1 280px; }
 .page-head .actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* ---------- кнопки и поля ---------- */
@@ -485,3 +486,29 @@ details.advanced { display: grid; gap: 10px; }
 .hb-fill { display: block; height: 100%; border-radius: 5px; }
 .hb-val { text-align: right; font-variant-numeric: tabular-nums; }
 .mon-grid > .panel { align-content: start; }
+
+.cap b small { font-size: 13px; font-weight: 500; color: var(--ink-3); }
+.cap-bar { display: block; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; margin-top: 4px; }
+.cap-bar > i { display: block; height: 100%; background: var(--accent); }
+
+/* ---- каталог: фото пачки ---- */
+.photo-cell { position: relative; white-space: nowrap; }
+.thumb-btn { position: relative; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 4px; }
+.thumb-btn:hover img, .thumb-btn:focus-visible img { outline: 2px solid var(--accent); outline-offset: 1px; }
+.thumb-add { position: absolute; right: -6px; bottom: -4px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); }
+.thumb-del { position: absolute; top: 0; right: -6px; width: 20px; height: 20px; min-height: 0; padding: 0; }
+.new-sku-photo { display: flex; align-items: center; gap: 10px; }
+.new-sku-photo img { height: 70px; border-radius: 4px; border: 1px solid var(--line); }
+
+/* ---- дерево кластеров ---- */
+.cluster-tree { display: grid; gap: 10px; }
+.cluster-node { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 12px 14px; display: grid; gap: 8px; position: relative; }
+.cluster-node[class*="depth-"]:not(.depth-0)::before { content: ''; position: absolute; left: -16px; top: -10px; bottom: 50%; width: 14px; border-left: 2px solid var(--line); border-bottom: 2px solid var(--line); border-bottom-left-radius: 8px; }
+.cluster-head { display: flex; align-items: center; gap: 10px; }
+.cluster-head .cluster-name { font-weight: 600; max-width: 420px; }
+.cluster-body { display: grid; grid-template-columns: minmax(0, 2fr) minmax(200px, 1fr); gap: 12px; align-items: start; }
+@media (max-width: 760px) { .cluster-body { grid-template-columns: 1fr; } }
+
+/* графики берут ширину контейнера: контейнер не должен растягиваться под график */
+.monitor > *, .mon-grid > .panel { min-width: 0; }
+.chart, .vbars { width: 100%; min-width: 0; overflow: hidden; }
