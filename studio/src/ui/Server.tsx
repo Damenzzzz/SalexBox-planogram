@@ -53,13 +53,13 @@ function LoginModal({ onClose }: { onClose: () => void }) {
       <button className="btn btn-primary" type="submit" form="login-form" disabled={busy || !login.trim() || !password}>{busy ? 'Вхожу…' : 'Войти'}</button>
     </>}>
       <form id="login-form" className="grid2" onSubmit={submit}>
-        <label className="field"><span>Логин</span>
-          <input className="input" autoComplete="username" autoFocus value={login} onChange={e => setLogin(e.target.value)} /></label>
+        <label className="field"><span>Логин или имя</span>
+          <input className="input" autoComplete="username" autoFocus placeholder="например, islambek" value={login} onChange={e => setLogin(e.target.value)} /></label>
         <label className="field"><span>Пароль</span>
           <input className="input" type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} /></label>
       </form>
       {error && <p className="chip chip-err" role="alert" style={{ whiteSpace: 'normal', lineHeight: 1.4, padding: '6px 9px' }}>{error}</p>}
-      <p className="hint">После входа планограммы, шкафы, точки и сверки хранятся на сервере вашей компании и открываются с любого компьютера. Без входа Studio работает только в этом браузере. Логин выдаёт администратор.</p>
+      <p className="hint">После входа планограммы, шкафы, точки и сверки хранятся на сервере вашей компании и открываются с любого компьютера. Без входа Studio работает только в этом браузере. Логин и пароль выдаёт администратор; вместо логина можно ввести имя. После пяти неверных попыток вход закрывается на 10 минут.</p>
     </Modal>
   );
 }
