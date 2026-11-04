@@ -30,7 +30,7 @@
 | Часть | Где | Что делает |
 |---|---|---|
 | Studio | этот репозиторий, `studio/` | интерфейс: React 19, TypeScript, Vite, Canvas 2D |
-| Сервер Studio | репозиторий IR `salesbox-ir`, ветка `islambek/planogram-studio`, `service/.../api/studio.py` | клиенты, хранение, публикация, назначения, мониторинг |
+| Сервер Studio | репозиторий IR `salesbox-ir`, ветка `main`, `service/.../api/studio.py` | клиенты, хранение, публикация, назначения, мониторинг |
 | Сверка с планограммой | репозиторий IR, `packages/shelf` (`align.py`) | выравнивание рядов фото с полками планограммы |
 
 Studio подключается к серверу тем же ключом API, что и остальные клиенты IR (`X-API-Key`).
@@ -50,15 +50,16 @@ npm run dev          # http://localhost:5173, запросы /v1 уходят н
 npm run build        # статическая сборка в studio/dist
 ```
 
-Сервер — IR-сервис из ветки `islambek/planogram-studio`:
+Сервер — IR-сервис из ветки `main`:
 
 ```bash
 SALESBOX_API_KEYS='["ключ"]' uv run salesbox-api
 ```
 
-В проде Studio открывается с того же адреса, что и API: либо через `SALESBOX_API_STUDIO_DIR`
-(сервис отдаёт `dist/` на `/studio/`), либо через CDN, который отдаёт статику и пересылает `/v1` на
-сервис.
+В проде Studio открывается с того же адреса, что и API. Основной вариант — контейнер nginx, который
+отдаёт статику и пересылает `/v1` на IR: адрес IR задаётся одной настройкой `IR_UPSTREAM`, подробности
+в [DEPLOY.md](DEPLOY.md). Ещё можно отдавать `dist/` самим сервисом через `SALESBOX_API_STUDIO_DIR`
+(на `/studio/`) или через CDN, который пересылает `/v1` на сервис.
 
 ## Отчёты
 
