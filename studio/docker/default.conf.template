@@ -1,0 +1,62 @@
+# Studio ходит на тот же адрес, откуда открыта, поэтому /v1 пересылается на IR, и CORS не нужен.
+# Ключ API сюда не кладётся: его вводит человек в окне «Подключить».
+
+server_tokens off;
+
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+    absolute_redirect off;
+
+    # Адрес IR через переменную: nginx резолвит его при запросе, а не один раз при старте
+    resolver ${NGINX_LOCAL_RESOLVERS} valid=30s ipv6=off;
+    set $ir_upstream "${IR_UPSTREAM}";
+
+    gzip on;
+    gzip_min_length 1024;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+
+    # Проверка для оркестратора: от IR не зависит, интерфейс нужен и когда IR лежит
+    location = /healthz {
+        access_log off;
+        default_type application/json;
+        return 200 '{"status":"ok"}';
+    }
+
+    # API и проверка связи с IR. Заголовки X-API-Key, X-Client-Id, X-Studio-User идут как есть
+    location ~ ^/(v1/|readyz$) {
+        proxy_pass $ir_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Host $proxy_host;
+        proxy_set_header Connection "";
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        proxy_ssl_server_name on;
+        proxy_ssl_verify on;
+        proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+
+        # Фото до 30 МБ плюс обёртка multipart; сам лимит проверяет IR. На диск контейнера ничего не пишем
+        client_max_body_size 32m;
+        proxy_request_buffering off;
+        proxy_buffering off;
+
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 120s;
+        proxy_read_timeout 120s;
+    }
+
+    # Файлы сборки с хешем в имени не меняются
+    location /assets/ {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
+    # Навигация в адресе после #, поэтому страница одна. Без кэша: новая версия видна сразу
+    location / {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "no-cache" always;
+        try_files $uri /index.html;
+    }
+}
