@@ -85,6 +85,29 @@ curl -i https://planogram.apps.salesbox.kz/v1/planograms # 401: IR новой в
 Если последний запрос отвечает 404, на IR ещё старая версия. Ответ 502 значит, что контейнер не
 достучался до `IR_UPSTREAM`.
 
+## Перенос данных
+
+Готовые шкафы, планограммы и назначения лежат одним файлом в проекте `salesbox/salesbox-ir`: раздел
+Deploy → Package registry, пакет `planogram-studio-data`, версия `2026.11.4`. Учётных записей и
+сессий в нём нет.
+
+Перенос делается один раз, пока в Studio на новом сервере ещё никто не работал:
+
+```bash
+curl --header "PRIVATE-TOKEN: <токен с read_api>" -O \
+  https://gitlab.apps.salesbox.kz/api/v4/projects/21/packages/generic/planogram-studio-data/2026.11.4/studio-export.sqlite.gz
+shasum -a 256 studio-export.sqlite.gz
+# 249bcde66f37080c98dd30955e6c63c0b6aea1e22205c0d02a2ce9628d96a117
+gunzip studio-export.sqlite.gz
+```
+
+1. Остановить IR.
+2. Положить файл в том `/data` под именем `studio.sqlite`, владелец — uid 10001. Если там уже есть
+   `studio.sqlite-wal` и `studio.sqlite-shm`, удалить их.
+3. Запустить IR.
+
+Файл `api.sqlite` не трогать: в нём фото самого сервиса.
+
 ## Обновление
 
 Собрать из этого репозитория и выложить образ:
