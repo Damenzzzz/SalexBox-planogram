@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { capacity, sortedShelves } from '../domain/geometry';
+import { FORMATS } from '../domain/formats';
+import { capacity, lanesFor, sortedShelves } from '../domain/geometry';
+import { beverageFixtures } from '../domain/beverageTemplates';
 import { extraFixtures, newPlanogram } from '../domain/templates';
 import type { Doors, Material } from '../domain/types';
 import { go, useStore } from '../store';
@@ -24,7 +26,7 @@ export function Fixtures() {
         <div className="actions">
           <button className="btn" onClick={() => {
             const have = new Set(useStore.getState().fixtures.map(f => f.code));
-            const add = extraFixtures().filter(f => !have.has(f.code));
+            const add = [...extraFixtures(), ...beverageFixtures()].filter(f => !have.has(f.code));
             add.forEach(f => useStore.getState().saveFixture(f));
             notify(add.length ? `Добавлено типовых шкафов: ${add.length}` : 'Все типовые шкафы уже в библиотеке');
           }}><Icon name="cabinet" />Типовые шкафы</button>
@@ -38,12 +40,14 @@ export function Fixtures() {
           return (
             <article className="lib-card" key={f.id}>
               <button className="lib-thumb" onClick={() => go(`fixture/${f.id}`)} aria-label={`Открыть ${f.name} в конструкторе`}>
-                <SceneThumb width={240} height={220} scene={{ fx: f, rows: null, sku: () => undefined, mode: 'texture', warn: false, dims: false, sampleFill: 'KS' }} />
+                <SceneThumb width={240} height={220} scene={{ fx: f, rows: null, sku: () => undefined, mode: 'texture', warn: false, dims: false, sampleFill: f.category === 'beverages' ? 'PET05' : 'KS' }} />
               </button>
               <div className="lib-body">
                 <div className="lib-title"><h3 title={f.name}>{f.name}</h3><span className="code">{f.code}</span></div>
                 <div className="meta"><span><b>{f.w}×{f.h}×{f.d}</b> мм</span><span><b>{sortedShelves(f).length}</b> полок</span><span>{DOORS[f.doors]}, {MATERIALS[f.material]}</span></div>
-                <div className="meta"><span><b>{cap.ksLanes}</b> рядов KS</span><span><b>{cap.ssLanes}</b> рядов SS</span><span>≈ <b>{cap.packs}</b> пачек KS</span></div>
+                {f.category === 'beverages'
+                  ? <div className="meta"><span>напитки</span><span>≈ <b>{sortedShelves(f).reduce((a, sh) => a + lanesFor(f, sh, FORMATS.PET05.w, FORMATS.PET05.lane), 0)}</b> фейсингов 0.5 л</span></div>
+                  : <div className="meta"><span><b>{cap.ksLanes}</b> рядов KS</span><span><b>{cap.ssLanes}</b> рядов SS</span><span>≈ <b>{cap.packs}</b> пачек KS</span></div>}
                 <div className="meta"><span>версия <b>{f.version}</b></span><span>в планограммах: <b>{used}</b></span></div>
                 <div className="lib-actions">
                   <button className="btn btn-sm btn-primary" onClick={() => go(`fixture/${f.id}`)}>Конструктор</button>

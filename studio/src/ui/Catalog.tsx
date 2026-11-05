@@ -2,7 +2,7 @@ import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { makeLook } from '../domain/catalog';
 import { download } from '../domain/io';
 import { measuresTemplate, parseMeasures } from '../domain/measures';
-import { FORMATS, FORMAT_ORDER, MAKERS, MAKER_ORDER, SEGMENTS, formatFromLabel, makerOf, segmentOf } from '../domain/formats';
+import { ALL_FORMATS, FORMATS, MAKERS, MAKER_ORDER, SEGMENTS, formatFromLabel, makerOf, segmentOf } from '../domain/formats';
 import { uid } from '../domain/geometry';
 import { packPhoto } from '../domain/packPhoto';
 import type { FormatId, Maker, Segment, Sku, SkuPatch } from '../domain/types';
@@ -127,7 +127,7 @@ const Row = memo(function Row({ s, patched, tech, onPhoto }: { s: Sku; patched: 
       <td className="name"><b>{s.name}</b>{tech ? <div className="hint mono">{s.label ?? 'свой SKU, без IR-метки'}</div> : s.custom ? <div className="hint">свой SKU</div> : null}</td>
       <td><select className="select" value={s.maker} aria-label="Производитель" onChange={e => editSku(s, { maker: e.target.value as Maker })}>{MAKER_ORDER.map(m => <option key={m} value={m}>{MAKERS[m]}</option>)}</select></td>
       <td><select className="select" value={s.segment} aria-label="Сегмент" onChange={e => editSku(s, { segment: e.target.value as Segment })}>{Object.entries(SEGMENTS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></td>
-      <td><select className="select" value={s.format} aria-label="Формат" onChange={e => editSku(s, { format: e.target.value as FormatId })}>{FORMAT_ORDER.map(f => <option key={f} value={f}>{FORMATS[f].name}{s.formatGuessed && f === s.format ? ' ?' : ''}</option>)}</select></td>
+      <td><select className="select" value={s.format} aria-label="Формат" onChange={e => editSku(s, { format: e.target.value as FormatId })}>{ALL_FORMATS.map(f => <option key={f} value={f}>{FORMATS[f].name}{s.formatGuessed && f === s.format ? ' ?' : ''}</option>)}</select></td>
       {(['w', 'h', 'd'] as const).map(k => (
         <td key={k} className="w-num"><input className="input" defaultValue={s[k]} key={`${k}-${s[k]}`} aria-label={k}
           onBlur={e => { const v = num(e.target.value); if (v && v !== s[k]) editSku(s, { [k]: v, measured: true }); else e.target.value = String(s[k]); }} /></td>
@@ -175,7 +175,7 @@ function NewSku({ onClose, onSave }: { onClose: () => void; onSave: (s: Sku) => 
       <div className="grid2">
         <label className="field"><span>Бренд</span><input className="input" autoFocus value={brand} onChange={e => setBrand(e.target.value)} placeholder="Kent" /></label>
         <label className="field"><span>Название</span><input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="Crystal Ice SS" /></label>
-        <label className="field"><span>Формат{!touched.format && full ? ' · по названию' : ''}</span><select className="select" value={val.format} onChange={e => set('format', e.target.value as FormatId)}>{FORMAT_ORDER.map(f => <option key={f} value={f}>{FORMATS[f].name}</option>)}</select></label>
+        <label className="field"><span>Формат{!touched.format && full ? ' · по названию' : ''}</span><select className="select" value={val.format} onChange={e => set('format', e.target.value as FormatId)}>{ALL_FORMATS.map(f => <option key={f} value={f}>{FORMATS[f].name}</option>)}</select></label>
         <label className="field"><span>Производитель{!touched.maker && b ? ' · по бренду' : ''}</span><select className="select" value={val.maker} onChange={e => set('maker', e.target.value as Maker)}>{MAKER_ORDER.map(m => <option key={m} value={m}>{MAKERS[m]}</option>)}</select></label>
         <label className="field"><span>Сегмент</span><select className="select" value={val.segment} onChange={e => set('segment', e.target.value as Segment)}>{Object.entries(SEGMENTS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
         <label className="field"><span>Цена, ₸</span><input className="input" inputMode="numeric" value={price} onChange={e => setPrice(e.target.value)} placeholder="необязательно" /></label>

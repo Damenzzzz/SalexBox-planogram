@@ -17,14 +17,24 @@ export const FORMATS: Record<FormatId, Format> = {
   SS:      { name: 'Super Slims',    w: 42, h: 98,  d: 18, lane: 45 },
   MINI:    { name: 'Mini',           w: 43, h: 89,  d: 18, lane: 45 },
   BLISTER: { name: 'Блистер',        w: 95, h: 24,  d: 14, lane: 100 },
+  CAN033:  { name: 'Банка 0.33',     w: 66, h: 115, d: 66, lane: 70 },
+  CANSL:   { name: 'Банка 0.33 узкая', w: 58, h: 146, d: 58, lane: 62 },
+  CAN05:   { name: 'Банка 0.5',      w: 66, h: 168, d: 66, lane: 70 },
+  GL025:   { name: 'Стекло 0.25',    w: 58, h: 190, d: 58, lane: 62 },
+  PET05:   { name: 'ПЭТ 0.5',        w: 65, h: 205, d: 65, lane: 69 },
+  PET1:    { name: 'ПЭТ 1',          w: 80, h: 265, d: 80, lane: 84 },
+  PET15:   { name: 'ПЭТ 1.5',        w: 92, h: 318, d: 92, lane: 96 },
+  PET2:    { name: 'ПЭТ 2',          w: 104, h: 330, d: 104, lane: 108 },
 };
 
 export const FORMAT_ORDER: FormatId[] = ['KS', 'KS100', 'KSSL', 'CMP', 'CMP100', 'NANO', 'DEMI', 'SS', 'MINI', 'BLISTER'];
+export const DRINK_FORMAT_ORDER: FormatId[] = ['CAN033', 'CANSL', 'CAN05', 'GL025', 'PET05', 'PET1', 'PET15', 'PET2'];
+export const ALL_FORMATS: FormatId[] = [...FORMAT_ORDER, ...DRINK_FORMAT_ORDER];
 
 export const MAKERS: Record<Maker, string> = {
-  PMI: 'PMI', JTI: 'JTI', BAT: 'BAT', KTG: 'KT&G', IMP: 'Imperial', OTH: 'Другие',
+  PMI: 'PMI', JTI: 'JTI', BAT: 'BAT', KTG: 'KT&G', IMP: 'Imperial', CCI: 'Coca-Cola', OTH: 'Другие',
 };
-export const MAKER_ORDER: Maker[] = ['KTG', 'JTI', 'PMI', 'BAT', 'IMP', 'OTH'];
+export const MAKER_ORDER: Maker[] = ['KTG', 'JTI', 'PMI', 'BAT', 'IMP', 'CCI', 'OTH'];
 
 export const SEGMENTS: Record<Segment, string> = { premium: 'Премиум', mid: 'Средний', economy: 'Эконом' };
 

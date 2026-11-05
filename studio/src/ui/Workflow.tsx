@@ -247,7 +247,7 @@ export function FitModal({ p, get, onClose }: { p: Planogram; get: Get; onClose:
       <div className="tpl-pick">
         {fixtures.map(f => (
           <button key={f.id} type="button" aria-pressed={f.id === tpl} onClick={() => setTpl(f.id)}>
-            <div className="lib-thumb"><SceneThumb width={130} height={115} scene={{ fx: f, rows: null, sku: () => undefined, mode: 'texture', warn: false, dims: false, sampleFill: 'KS' }} /></div>
+            <div className="lib-thumb"><SceneThumb width={130} height={115} scene={{ fx: f, rows: null, sku: () => undefined, mode: 'texture', warn: false, dims: false, sampleFill: f.category === 'beverages' ? 'PET05' : 'KS' }} /></div>
             <span className="code" style={{ justifySelf: 'start' }}>{f.code}</span>
             <span style={{ fontSize: 13, fontWeight: 600 }}>{f.name}{f.id === p.templateId ? ' · текущий' : ''}</span>
             <span className="hint">{f.w}×{f.h} · {f.shelves.length} полок · {capacity(f).ksLanes} рядов KS</span>
@@ -273,7 +273,7 @@ export function AutoModal({ p, get, list, onApply, onClose }: { p: Planogram; ge
   const [bySales, setBySales] = useState(true);
   const res = useMemo(() => autoLayout(p, get, { skus, eyeLevel, bySales }), [p, get, skus, eyeLevel, bySales]);
   const salesKnown = useMemo(() => skus.filter(id => (get(id)?.sales ?? 0) > 0).length, [skus, get]);
-  const options = useMemo(() => list.filter(s => !skus.includes(s.id)).sort((a, b) => a.name.localeCompare(b.name)), [list, skus]);
+  const options = useMemo(() => list.filter(s => (s.category ?? 'cigarettes') === (p.fixture.category ?? 'cigarettes') && !skus.includes(s.id)).sort((a, b) => a.name.localeCompare(b.name)), [list, skus, p.fixture.category]);
   return (
     <Modal title="Разложить по правилам" onClose={onClose} footer={<>
       <button className="btn" onClick={onClose}>Отмена</button>

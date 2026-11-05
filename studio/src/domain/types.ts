@@ -1,9 +1,13 @@
 // Все длины — миллиметры. Начало координат шкафа — левый нижний угол, y вверх.
 
 export type FormatId =
-  | 'KS' | 'KS100' | 'KSSL' | 'CMP' | 'CMP100' | 'NANO' | 'DEMI' | 'SS' | 'MINI' | 'BLISTER';
+  | 'KS' | 'KS100' | 'KSSL' | 'CMP' | 'CMP100' | 'NANO' | 'DEMI' | 'SS' | 'MINI' | 'BLISTER'
+  | 'CAN033' | 'CANSL' | 'CAN05' | 'GL025' | 'PET05' | 'PET1' | 'PET15' | 'PET2';
 
-export type Maker = 'PMI' | 'JTI' | 'BAT' | 'KTG' | 'IMP' | 'OTH';
+// Что стоит на полке: по умолчанию сигареты, у шкафов и SKU из старых версий поля нет
+export type Category = 'cigarettes' | 'beverages';
+
+export type Maker = 'PMI' | 'JTI' | 'BAT' | 'KTG' | 'IMP' | 'CCI' | 'OTH';
 export type Segment = 'premium' | 'mid' | 'economy';
 export type Market = 'KZ' | 'KG' | 'UZ' | 'RU';
 
@@ -38,6 +42,7 @@ export interface Sku {
   ean: string;
   look: Look;
   custom: boolean;          // добавлен вручную
+  category?: Category;
 }
 
 export type SkuPatch = Partial<Pick<Sku, 'maker' | 'segment' | 'format' | 'w' | 'h' | 'd' | 'measured' | 'price' | 'sales' | 'ean' | 'name' | 'photo'>>;
@@ -71,6 +76,7 @@ export interface Fixture {
   shelves: Shelf[];       // снизу вверх
   version: number;
   updatedAt: string;
+  category?: Category;
 }
 
 export interface Placement {

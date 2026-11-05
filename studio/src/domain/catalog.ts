@@ -1,4 +1,5 @@
 import gallery from '../data/gallery.json';
+import { beverageSkus } from './beverages';
 import { FORMATS, formatFromLabel, makerOf, segmentOf } from './formats';
 import type { Look, LookFont, LookKind, Sku, SkuPatch } from './types';
 
@@ -98,6 +99,11 @@ export function makeLook(brand: string, model: string): Look {
   };
 }
 
+// Вид напитка: цвета заданы явно, в названии их нет
+export function makeLookFor(word: string, name: string, base: string, accent: string): Look {
+  return { kind: 'band', c: [base, shade(base, -0.12)], a: accent, ink: inkOn(base), word: word.toUpperCase(), sub: name.toUpperCase(), font: 'sans' };
+}
+
 // SKU по метке IR «Бренд/Модель»: формат, производитель и вид — из названия
 export function skuFromLabel(label: string, refs = 0, custom = false): Sku {
   const i = label.indexOf('/');
@@ -116,7 +122,7 @@ export function skuFromLabel(label: string, refs = 0, custom = false): Sku {
 let baseCache: { refs: Record<string, number> | null; list: Sku[] } | null = null;
 export function baseCatalog(refs: Record<string, number> | null = null): Sku[] {
   if (baseCache?.refs !== refs) baseCache = { refs, list: gallery.labels.map(({ label }) => skuFromLabel(label, refs?.[label] ?? 0)) };
-  return baseCache.list;
+  return [...baseCache.list, ...beverageSkus()];
 }
 
 // Пачка, которой нет в каталоге: рисуем её по метке, а не пропускаем молча

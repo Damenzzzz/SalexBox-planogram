@@ -49,7 +49,7 @@ export function toIrYaml(p: Planogram, sku: (id: string) => Sku | undefined): st
     '# configs/planograms/<client_id>/<outlet_id|default>.yaml — Planogram Studio',
     `# ${p.name} · версия ${p.version} · шкаф ${fx.code} ${fx.w}×${fx.h}×${fx.d} мм`,
     `name: ${q(irName(p))}`,
-    'category: cigarettes',
+    `category: ${fx.category ?? 'cigarettes'}`,
     '',
     'shelves:                       # 1 = верхняя полка',
   ];
@@ -66,11 +66,17 @@ export function toIrYaml(p: Planogram, sku: (id: string) => Sku | undefined): st
       zones.forEach(z => L.push(`      - {name: ${slug(z.brand) || 'zone'}, range: [${z.range[0].toFixed(2)}, ${z.range[1].toFixed(2)}], brand: ${q(z.brand)}}`));
     }
   });
-  const fm = Object.entries(p.rules.minFacings).filter(([, n]) => n > 0);
-  L.push('', fm.length ? 'facings_min:' : 'facings_min: {}');
-  fm.forEach(([id, n]) => L.push(`  ${q(irLabel(sku(id), id))}: ${n}`));
-  L.push('', p.rules.mustHave.length ? 'required:' : 'required: []');
-  p.rules.mustHave.forEach(id => L.push(`  - ${q(irLabel(sku(id), id))}`));
+  // у напитков разных объёмов метка одна: минимумы складываются, обязательные не повторяются
+  const fm = new Map<string, number>();
+  Object.entries(p.rules.minFacings).filter(([, n]) => n > 0).forEach(([id, n]) => {
+    const label = irLabel(sku(id), id);
+    fm.set(label, (fm.get(label) ?? 0) + n);
+  });
+  L.push('', fm.size ? 'facings_min:' : 'facings_min: {}');
+  fm.forEach((n, label) => L.push(`  ${q(label)}: ${n}`));
+  const required = [...new Set(p.rules.mustHave.map(id => irLabel(sku(id), id)))];
+  L.push('', required.length ? 'required:' : 'required: []');
+  required.forEach(label => L.push(`  - ${q(label)}`));
   if (p.ir.twins.length) {
     L.push('', 'twins:                         # IR их путает: подмена внутри пары считается ok');
     p.ir.twins.forEach(([a, b]) => L.push(`  - [${q(irLabel(sku(a), a))}, ${q(irLabel(sku(b), b))}]`));

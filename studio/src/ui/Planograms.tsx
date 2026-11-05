@@ -5,6 +5,7 @@ import { cropFaces, draftFromPhoto, type PhotoResultIn } from '../domain/draft';
 import { runStats } from '../domain/compare';
 import { download, importText, toBundle } from '../domain/io';
 import { capacity, sortedShelves } from '../domain/geometry';
+import { beverageFixtures, beveragePlanograms } from '../domain/beverageTemplates';
 import { newPlanogram } from '../domain/templates';
 import type { Market, Planogram, PlanogramStatus } from '../domain/types';
 import { go, useCatalog, useStore, useTech } from '../store';
@@ -44,6 +45,15 @@ export function Planograms() {
           <p>Шкаф из библиотеки плюс раскладка пачек. Готовую планограмму выбирают в сверке IR, и распознавание проверяет фото по ней.</p>
         </div>
         <div className="actions">
+          <button className="btn" onClick={() => {
+            const st = useStore.getState();
+            const have = new Set(st.fixtures.map(f => f.code));
+            beverageFixtures().filter(f => !have.has(f.code)).forEach(f => st.saveFixture(f));
+            const names = new Set(st.planograms.map(p => p.name));
+            const add = beveragePlanograms(useStore.getState().fixtures).filter(p => !names.has(p.name));
+            add.forEach(p => st.savePlanogram(p));
+            notify(add.length ? `Планограмм напитков добавлено: ${add.length}` : 'Планограммы напитков уже есть');
+          }}><Icon name="cabinet" />Напитки: готовые планограммы</button>
           <button className="btn" onClick={() => file.current?.click()}><Icon name="upload" />Импорт</button>
           <button className="btn" onClick={() => setDrafting(true)}><Icon name="camera" />Черновик по фото</button>
           <button className="btn" onClick={() => download(`planogram-studio-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(toBundle(planograms, fixtures, custom), null, 2))}><Icon name="download" />Выгрузить всё</button>
@@ -136,7 +146,7 @@ function NewPlanogram({ onClose, onCreate }: { onClose: () => void; onCreate: (p
             const cap = capacity(f);
             return (
               <button key={f.id} type="button" aria-pressed={f.id === tpl} onClick={() => setTpl(f.id)}>
-                <div className="lib-thumb"><SceneThumb width={130} height={115} scene={{ fx: f, rows: null, sku: () => undefined, mode: 'texture', warn: false, dims: false, sampleFill: 'KS' }} /></div>
+                <div className="lib-thumb"><SceneThumb width={130} height={115} scene={{ fx: f, rows: null, sku: () => undefined, mode: 'texture', warn: false, dims: false, sampleFill: f.category === 'beverages' ? 'PET05' : 'KS' }} /></div>
                 <span className="code" style={{ justifySelf: 'start' }}>{f.code}</span>
                 <span style={{ fontSize: 13, fontWeight: 600 }}>{f.name}</span>
                 <span className="hint">{f.w}×{f.h}×{f.d} · {f.shelves.length} полок · {cap.ksLanes} рядов KS</span>

@@ -1,3 +1,4 @@
+import { beverageFixtures } from './beverageTemplates';
 import { evenShelves, uid } from './geometry';
 import type { AlignCosts, Fixture, Planogram } from './types';
 
@@ -29,6 +30,7 @@ export function seedFixtures(): Fixture[] {
     fixture({ ...common, code: 'С4-71-204', name: 'Высокий с нишей для запаса', w: 711, h: 2040, d: 350, base: 520, header: 160, doors: 'shutter', material: 'graphite', count: 7 }),
     fixture({ ...common, code: 'С5-70-180', name: 'Шкаф RKS с раздвижной дверью', w: 700, h: 1800, d: 300, base: 300, header: 120, doors: 'glass', material: 'wood', count: 7 }),
     ...extraFixtures(),
+    ...beverageFixtures(),
   ];
 }
 

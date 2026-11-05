@@ -122,8 +122,9 @@ export function drawScene(ctx: CanvasRenderingContext2D, o: SceneOpts): HitRect[
       lb.addColorStop(0, '#f4f1ea'); lb.addColorStop(1, '#d9d4c8');
       g.fillStyle = lb; rr(g, xL, hy0, xR - xL, hy1 - hy0, 6 * S); g.fill();
       g.fillStyle = '#1f2a44'; g.textAlign = 'center'; g.textBaseline = 'middle';
-      fitFont(g, 'ТАБАК · TEMEKI', (xR - xL) * 0.8, Math.min(46 * S, (hy1 - hy0) * 0.42), s => `700 ${s}px Unbounded, "Golos Text", sans-serif`);
-      g.fillText('ТАБАК · TEMEKI', X(fx.w / 2), (hy0 + hy1) / 2 - (hy1 - hy0) * 0.08);
+      const headerText = fx.category === 'beverages' ? 'НАПИТКИ · СУСЫНДАР' : 'ТАБАК · TEMEKI';
+      fitFont(g, headerText, (xR - xL) * 0.8, Math.min(46 * S, (hy1 - hy0) * 0.42), s => `700 ${s}px Unbounded, "Golos Text", sans-serif`);
+      g.fillText(headerText, X(fx.w / 2), (hy0 + hy1) / 2 - (hy1 - hy0) * 0.08);
       g.fillStyle = '#5a6172';
       fitFont(g, 'Продажа лицам старше 21 года', (xR - xL) * 0.7, Math.min(20 * S, (hy1 - hy0) * 0.18), s => `500 ${s}px "Golos Text", sans-serif`);
       g.fillText('Продажа лицам старше 21 года', X(fx.w / 2), (hy0 + hy1) / 2 + (hy1 - hy0) * 0.26);
@@ -262,12 +263,15 @@ export function drawScene(ctx: CanvasRenderingContext2D, o: SceneOpts): HitRect[
     } else {
       const ph = Math.min(s.h, cy - fy - 2) * S, pw = Math.min(s.w, lane) * S;
       const px = x0 + (x1 - x0 - pw) / 2, py = Y(fy) - ph;
-      g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(px + 2 * S, py + 3 * S, pw, ph);
+      const drink = s.category === 'beverages';   // у напитка нет толкателя и тени от короба
+      if (!drink) { g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(px + 2 * S, py + 3 * S, pw, ph); }
       g.drawImage(texture(s, pw * DPR, ph * DPR, o.warn), px, py, pw, ph);
-      g.fillStyle = 'rgba(190,225,255,.16)'; g.fillRect(px - S, Y(fy) - 9 * S, pw + 2 * S, 9 * S);
-      g.fillStyle = 'rgba(160,205,255,.55)'; g.fillRect(px - S, Y(fy) - 9 * S, pw + 2 * S, Math.max(1, 1.2 * S));
+      if (!drink) {
+        g.fillStyle = 'rgba(190,225,255,.16)'; g.fillRect(px - S, Y(fy) - 9 * S, pw + 2 * S, 9 * S);
+        g.fillStyle = 'rgba(160,205,255,.55)'; g.fillRect(px - S, Y(fy) - 9 * S, pw + 2 * S, Math.max(1, 1.2 * S));
+      }
       if (o.mode === 'ir') {
-        const wh = o.warn && s.h > s.w ? ph * WARN.share : 0;
+        const wh = o.warn && !drink && s.h > s.w ? ph * WARN.share : 0;
         g.fillStyle = 'rgba(8,10,14,.62)'; g.fillRect(px, py, pw, wh);
         g.strokeStyle = tok('--st-ok'); g.lineWidth = 1.2; g.strokeRect(px, py, pw, ph);
         g.setLineDash([3, 2]); g.strokeStyle = tok('--ir'); g.lineWidth = 1;

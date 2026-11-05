@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { analyse, visibleIssues, type Analysis, type Issue } from '../domain/checks';
-import { FORMATS, FORMAT_ORDER, MAKERS, MAKER_ORDER, SEGMENTS } from '../domain/formats';
+import { DRINK_FORMAT_ORDER, FORMATS, FORMAT_ORDER, MAKERS, MAKER_ORDER, SEGMENTS } from '../domain/formats';
 import { clampShelfY, clearanceOf, compactFixture, innerW, laneOf, packFloor, packsDeep, shelfIndex, shelvesTopDown, sortedShelves, uid, usedWidth } from '../domain/geometry';
 import { planogramSheets } from '../domain/exports';
 import { download, toBundle } from '../domain/io';
@@ -232,9 +232,10 @@ function EditorView({ p }: { p: Planogram }) {
   // ---- каталог ----
   const filtered = useMemo(() => {
     const qq = query.trim().toLowerCase();
-    return list.filter(s => (maker === 'ALL' || s.maker === maker) && (format === 'ALL' || s.format === format)
+    const category = p.fixture.category ?? 'cigarettes';
+    return list.filter(s => (s.category ?? 'cigarettes') === category && (maker === 'ALL' || s.maker === maker) && (format === 'ALL' || s.format === format)
       && (!onlyPlaced || a.facings[s.id]) && (!qq || s.id.toLowerCase().includes(qq) || s.name.toLowerCase().includes(qq)));
-  }, [list, query, maker, format, onlyPlaced, a.facings]);
+  }, [list, query, maker, format, onlyPlaced, a.facings, p.fixture.category]);
 
   const selected = selP ? find(selP) : null;
   const selSku = selected ? get(selected.pl.sku) : undefined;
@@ -287,7 +288,7 @@ function EditorView({ p }: { p: Planogram }) {
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: 8 }}>
               <select className="select" aria-label="Формат" value={format} onChange={e => setFormat(e.target.value as FormatId | 'ALL')}>
                 <option value="ALL">Любой формат</option>
-                {FORMAT_ORDER.map(f => <option key={f} value={f}>{FORMATS[f].name}</option>)}
+                {(p.fixture.category === 'beverages' ? DRINK_FORMAT_ORDER : FORMAT_ORDER).map(f => <option key={f} value={f}>{FORMATS[f].name}</option>)}
               </select>
               <label className="check"><input type="checkbox" checked={onlyPlaced} onChange={e => setOnlyPlaced(e.target.checked)} />на шкафу</label>
             </div>

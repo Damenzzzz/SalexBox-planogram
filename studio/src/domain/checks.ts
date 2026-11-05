@@ -107,6 +107,7 @@ export function analyse(p: Planogram, sku: (id: string) => Sku | undefined): Ana
   placed.forEach(id => {
     const s = sku(id);
     if (!s) return;
+    if (s.category === 'beverages') return;   // IR сверяет напитки по бренду, форма и эталоны пачки им не нужны
     if (!s.label) issues.push({ sev: 'ir', skuId: id, tech: true, text: `${s.name}: нет IR-метки. IR сверит только бренд` });
     else if (s.refs === 0) { noRefs++; issues.push({ sev: 'ir', skuId: id, tech: true, text: `${s.name}: нет эталонов в галерее. Добавьте 3+ фото с полки` }); }
     else if (s.refs < IR_LIMITS.readyRefs) thin++;

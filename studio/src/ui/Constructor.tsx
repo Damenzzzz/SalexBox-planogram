@@ -4,13 +4,14 @@ import {
   addShelf, autoCode, capacity, clampShelfY, clearanceOf, depthOf, evenShelves, lanesFor, MIN_CLEAR, shelfIndex, shelvesTopDown, sortedShelves,
 } from '../domain/geometry';
 import { newPlanogram } from '../domain/templates';
-import type { Doors, FormatId, Fixture, LaneMode, Material } from '../domain/types';
+import type { Category, Doors, FormatId, Fixture, LaneMode, Material } from '../domain/types';
 import { MARGIN } from '../render/scene';
 import { go, useStore, useTech } from '../store';
 import { Icon, NumField, Seg, Stage, useHistory, type StageHandle } from './common';
 import { DOORS, MATERIALS } from './Fixtures';
 
 const SAMPLE: [FormatId | 'none', string][] = [['none', 'Нет'], ['KS', 'KS'], ['SS', 'SS'], ['CMP', 'Compact'], ['NANO', 'Nano'], ['KS100', 'KS 100']];
+const DRINK_SAMPLE: [FormatId | 'none', string][] = [['none', 'Нет'], ['CANSL', 'Банка'], ['PET05', '0.5 л'], ['PET1', '1 л'], ['PET15', '1.5 л']];
 const codeNumber = (code: string) => Number(/^[СC](\d+)/i.exec(code)?.[1]) || null;
 
 export function Constructor({ id }: { id: string }) {
@@ -37,7 +38,7 @@ function ConstructorView({ fx }: { fx: Fixture }) {
   const [sel, setSel] = useState<string | null>(null);
   const [hover, setHover] = useState<string | null>(null);
   const [cursor, setCursor] = useState('default');
-  const [sample, setSample] = useState<FormatId | 'none'>('KS');
+  const [sample, setSample] = useState<FormatId | 'none'>(fx?.category === 'beverages' ? 'PET05' : 'KS');
   const [closed, setClosed] = useState(false);
   const [zoom, setZoom] = useState(1);
   const shown = draft ?? fx;
@@ -142,8 +143,8 @@ function ConstructorView({ fx }: { fx: Fixture }) {
       <div className="split two">
         <div className="center">
           <div className="canvas-bar">
-            <span>Пачки для примера</span>
-            <Seg label="Пачки для примера" value={sample} options={SAMPLE} onChange={setSample} />
+            <span>{fx?.category === 'beverages' ? 'Напитки для примера' : 'Пачки для примера'}</span>
+            <Seg label="Товар для примера" value={sample} options={fx?.category === 'beverages' ? DRINK_SAMPLE : SAMPLE} onChange={setSample} />
             {fx.doors !== 'none' && <label className="check"><input type="checkbox" checked={closed} onChange={e => setClosed(e.target.checked)} />Закрыть {fx.doors === 'glass' ? 'дверцы' : 'шторку'}</label>}
             <span className="grow" />
             <button className="btn btn-sm icon-btn" aria-label="Отдалить" onClick={() => setZoom(z => Math.max(0.5, z / 1.25))}><Icon name="minus" size={15} /></button>
@@ -188,6 +189,11 @@ function ConstructorView({ fx }: { fx: Fixture }) {
                   <input type="checkbox" checked={fx.codeAuto} onChange={e => update(f => { f.codeAuto = e.target.checked; })} />собирать из размеров
                 </label>
               </div>
+              <label className="field"><span>Что стоит на полках</span>
+                <select className="select" value={fx.category ?? 'cigarettes'} onChange={e => { const category = e.target.value as Category; saveFixture({ ...fx, category }); setSample(category === 'beverages' ? 'PET05' : 'KS'); }}>
+                  <option value="cigarettes">Сигареты</option>
+                  <option value="beverages">Напитки</option>
+                </select></label>
             </section>
 
             <section className="section">

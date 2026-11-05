@@ -92,12 +92,66 @@ function paintPhoto(g: CanvasRenderingContext2D, img: HTMLImageElement, W: numbe
 
 // Лицевая сторона пачки: фото эталона из галереи, если сервис его отдаёт, иначе рисуем сами —
 // фирменные цвета, крышка, объём, целлофан, зона предупреждения
+// Напиток: силуэт бутылки или банки с этикеткой. Вокруг прозрачно, за ним видна полка
+function paintDrink(g: CanvasRenderingContext2D, sku: Sku, W: number, H: number) {
+  const L = sku.look;
+  const can = sku.format.startsWith('CAN');
+  g.beginPath();
+  if (can) {
+    rr(g, W * 0.04, H * 0.02, W * 0.92, H * 0.96, W * 0.12);
+  } else {
+    const neck = W * (sku.format === 'GL025' ? 0.17 : 0.2), shoulder = H * (sku.format === 'GL025' ? 0.42 : 0.26), top = H * 0.05;
+    g.moveTo(W / 2 - neck, top);
+    g.lineTo(W / 2 + neck, top);
+    g.lineTo(W / 2 + neck, H * 0.12);
+    g.quadraticCurveTo(W, H * 0.16, W * 0.98, shoulder);
+    g.lineTo(W * 0.98, H * 0.95);
+    g.quadraticCurveTo(W * 0.98, H, W * 0.85, H);
+    g.lineTo(W * 0.15, H);
+    g.quadraticCurveTo(W * 0.02, H, W * 0.02, H * 0.95);
+    g.lineTo(W * 0.02, shoulder);
+    g.quadraticCurveTo(0, H * 0.16, W / 2 - neck, H * 0.12);
+    g.closePath();
+  }
+  g.save();
+  g.clip();
+  const body = g.createLinearGradient(0, 0, W, 0);
+  body.addColorStop(0, shadeRgba(L.c[1], 0.95)); body.addColorStop(0.5, L.c[0]); body.addColorStop(1, shadeRgba(L.c[1], 0.95));
+  g.fillStyle = can ? L.c[0] : body;
+  g.fillRect(0, 0, W, H);
+  const y0 = H * (can ? 0.12 : 0.42), y1 = H * (can ? 0.88 : 0.72);
+  g.fillStyle = L.a;
+  g.fillRect(0, y0 + (y1 - y0) * 0.72, W, (y1 - y0) * 0.1);
+  g.fillStyle = L.ink;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  fitFont(g, L.word, W * 0.9, Math.max(6, W * 0.2), s => `700 ${s}px "Golos Text", sans-serif`);
+  g.fillText(L.word, W / 2, y0 + (y1 - y0) * 0.32);
+  fitFont(g, L.sub, W * 0.9, Math.max(5, W * 0.13), s => `500 ${s}px "Golos Text", sans-serif`);
+  g.fillText(L.sub, W / 2, y0 + (y1 - y0) * 0.58);
+  const light = g.createLinearGradient(0, 0, W, 0);
+  light.addColorStop(0, 'rgba(255,255,255,.22)'); light.addColorStop(0.3, 'rgba(255,255,255,0)'); light.addColorStop(1, 'rgba(0,0,0,.22)');
+  g.fillStyle = light;
+  g.fillRect(0, 0, W, H);
+  g.restore();
+  if (!can) {
+    g.fillStyle = sku.format === 'GL025' ? '#c9ccd1' : L.a === '#ffffff' ? '#e4002b' : L.a;
+    rr(g, W / 2 - W * 0.22, 0, W * 0.44, H * 0.055, 1); g.fill();
+  }
+}
+
+const shadeRgba = (hex: string, a: number) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`;
+};
+
 export function makeTexture(sku: Sku, W: number, H: number, warn: boolean, photo: HTMLImageElement | null = null): HTMLCanvasElement {
   const c = document.createElement('canvas');
   c.width = Math.max(6, Math.round(W)); c.height = Math.max(6, Math.round(H));
   W = c.width; H = c.height;
   const g = c.getContext('2d')!;
   const L = sku.look;
+  if (sku.category === 'beverages' && !photo) { paintDrink(g, sku, W, H); return c; }
   const flat = H < W;     // блистер лежит плашмя
   rr(g, 0, 0, W, H, Math.max(1, Math.min(W, H) * 0.05)); g.save(); g.clip();
   if (photo) {
