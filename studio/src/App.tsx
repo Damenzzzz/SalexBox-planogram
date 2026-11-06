@@ -49,7 +49,7 @@ export default function App() {
       <header className="topnav">
         <a className="brand" href="#/planograms">
           <svg width="24" height="24" viewBox="0 0 26 26" fill="none" aria-hidden="true"><rect x="2.5" y="2.5" width="21" height="21" rx="3" stroke="currentColor" strokeWidth="2" /><path d="M3 9.5h20M3 16.5h20" stroke="currentColor" strokeWidth="2" /><rect x="6" y="4.5" width="3" height="4" rx=".6" fill="currentColor" /><rect x="10.5" y="4.5" width="3" height="4" rx=".6" fill="currentColor" /><rect x="6" y="11.5" width="3" height="4" rx=".6" fill="currentColor" /><rect x="15" y="11.5" width="3" height="4" rx=".6" fill="currentColor" /><rect x="10.5" y="18.5" width="3" height="4" rx=".6" fill="currentColor" /></svg>
-          Planogram Studio <span className="pill">Табак</span>
+          Planogram Studio <span className="pill">Полки</span>
         </a>
         <nav className="tabs" aria-label="Разделы">
           {TABS.map(([path, name, icon, match]) => (
