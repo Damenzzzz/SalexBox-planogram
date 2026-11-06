@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { inHost } from '../domain/api';
 import { readData } from '../domain/persist';
 import { changeClient, connect, disconnect, importLocal, keyRemembered, resetSync, runSync, savedProfile, setSigner, useStore } from '../store';
 import { Icon, Modal } from './common';
@@ -92,11 +93,11 @@ function AccountModal({ onClose }: { onClose: () => void }) {
 
   return (
     <Modal title="Подключение к серверу" onClose={onClose} footer={<>
-      <button className="btn btn-ghost" disabled={!!busy} onClick={() => run('Отключаю…', async () => { await disconnect(); notify('Отключено. Studio работает в этом браузере'); onClose(); })}>Отключить</button>
+      {!inHost() && <button className="btn btn-ghost" disabled={!!busy} onClick={() => run('Отключаю…', async () => { await disconnect(); notify('Отключено. Studio работает в этом браузере'); onClose(); })}>Отключить</button>}
       <button className="btn btn-primary" onClick={onClose}>Готово</button>
     </>}>
-      <p className="hint">Ключ API {keyRemembered() ? 'запомнен на этом компьютере' : 'хранится до закрытия вкладки'}.</p>
-      <div className="grid2">
+      {!inHost() && <p className="hint">Ключ API {keyRemembered() ? 'запомнен на этом компьютере' : 'хранится до закрытия вкладки'}.</p>}
+      {!inHost() && <div className="grid2">
         <label className="field"><span>Клиент</span>
           <div className="row-actions">
             <input className="input" spellCheck={false} value={client} disabled={!!busy} onChange={e => setClient(e.target.value)} />
@@ -104,7 +105,7 @@ function AccountModal({ onClose }: { onClose: () => void }) {
           </div></label>
         <label className="field"><span>Как вас подписать</span>
           <input className="input" value={name} onChange={e => setName(e.target.value)} onBlur={() => { if (name.trim() !== server.name) setSigner(name); }} /></label>
-      </div>
+      </div>}
 
       <div className="row-actions">
         <span className={`chip ${sync.status === 'error' ? 'chip-err' : sync.status === 'idle' ? 'chip-ok' : ''}`}>{STATUS_RU[sync.status]}</span>

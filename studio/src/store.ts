@@ -1,7 +1,8 @@
 import { useMemo, useSyncExternalStore } from 'react';
 import { create } from 'zustand';
 import { buildCatalog } from './domain/catalog';
-import { ApiError, api, connection, hello, setConnection, type Conn } from './domain/api';
+import { ApiError, api, connection, hello, setConnection, setHostAuth, type Conn } from './domain/api';
+import { connectHost, createHostLink, wantsHost } from './domain/host';
 import { applyRemote, markSeed, resetSyncMeta, syncOnce, type Lost } from './domain/sync';
 import { connectGallery, setGalleryListener } from './render/gallery';
 import { clearTextures, clearThumbs, setOwnPhotoListener, setPhotos } from './render/textures';
@@ -262,6 +263,7 @@ async function openScope(c: Conn | null) {
 // отключаемся. Сервер недоступен — работаем дальше, синхронизация догонит
 export async function hydrate() {
   try { localStorage.removeItem('planogram-studio.me'); } catch { /* след старого входа по паролю */ }
+  if (wantsHost(location.search)) return hydrateInHost();
   const c = savedConn();
   await openScope(c);
   if (c) hello(c).catch(e => {
@@ -270,6 +272,16 @@ export async function hydrate() {
     useStore.getState().notify('Ключ API больше не подходит: подключитесь заново');
     return openScope(null);
   });
+}
+
+// Внутри кабинета: ключа нет, кто вошёл и в какой организации — говорит кабинет. Данные браузера
+// лежат отдельно по организации, поэтому вход под другой организацией их не смешает
+async function hydrateInHost() {
+  const link = createHostLink(window);
+  const session = await connectHost(link);
+  setHostAuth({ base: session.apiBase, token: link.token, refresh: link.refresh });
+  await openScope({ key: '', client: session.organizationId, name: session.userName });
+  hello(connection()!).catch(() => { /* отметка «зашёл» не должна мешать работе */ });
 }
 
 // Подключиться: сначала проверить ключ, потом открыть пространство клиента
